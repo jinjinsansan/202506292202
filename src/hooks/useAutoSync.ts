@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, userService, diaryService, isLocalMode } from '../lib/supabase';
 import { getCurrentUser } from '../lib/deviceAuth';
 
+// 自動同期の状態を管理するインターフェース
+
 interface AutoSyncState {
   isAutoSyncEnabled: boolean;
   isSyncing: boolean;
@@ -53,7 +55,12 @@ export const useAutoSync = (): AutoSyncState => {
   // ユーザー情報の初期化
   const initializeUser = useCallback(async () => {
     if (!supabase) {
-      console.log('ローカルモードで動作中: Supabase接続なし');
+      console.log('Supabase接続なし: ユーザー初期化をスキップ');
+      return;
+    }
+    
+    if (isLocalMode) {
+      console.log('ローカルモードで動作中: ユーザー初期化をスキップ');
       return;
     }
     
@@ -61,7 +68,7 @@ export const useAutoSync = (): AutoSyncState => {
       // 現在のユーザーを取得
       const user = getCurrentUser();
       if (!user) {
-        console.log('ユーザーがログインしていません');
+        console.log('ユーザーがログインしていません: ユーザー初期化をスキップ');
         return;
       }
       
@@ -80,12 +87,12 @@ export const useAutoSync = (): AutoSyncState => {
   // データ同期処理
   const syncData = useCallback(async (): Promise<boolean> => {
     if (!supabase) {
-      console.log('Supabase接続なし: 同期をスキップ');
+      console.log('Supabase接続なし: データ同期をスキップ');
       return false;
     }
     
     if (isLocalMode) {
-      console.log('ローカルモードで動作中: 同期をスキップ');
+      console.log('ローカルモードで動作中: データ同期をスキップ');
       return false;
     }
     
@@ -100,8 +107,9 @@ export const useAutoSync = (): AutoSyncState => {
     try {
       // 現在のユーザーを取得
       const user = getCurrentUser();
-      if (!user) {
-        throw new Error('ユーザーがログインしていません');
+      if (!user || !user.lineUsername) {
+        console.log('ユーザーがログインしていないか、ユーザー名が取得できません: データ同期をスキップ');
+        return false;
       }
       
       // ユーザーIDを取得
@@ -110,8 +118,9 @@ export const useAutoSync = (): AutoSyncState => {
       // ユーザーIDがない場合は初期化
       if (!userId) {
         const supabaseUser = await userService.createOrGetUser(user.lineUsername);
-        if (!supabaseUser) {
-          throw new Error('ユーザーの作成に失敗しました');
+        if (!supabaseUser || !supabaseUser.id) {
+          console.error('ユーザーの作成に失敗しました');
+          return false;
         }
         
         userId = supabaseUser.id;
@@ -121,7 +130,7 @@ export const useAutoSync = (): AutoSyncState => {
       // ローカルストレージから日記データを取得
       const savedEntries = localStorage.getItem('journalEntries');
       if (!savedEntries) {
-        console.log('同期するデータがありません');
+        console.log('同期するデータがありません: 同期をスキップ');
         setLastSyncTime(new Date().toISOString());
         localStorage.setItem('last_sync_time', new Date().toISOString());
         return true;

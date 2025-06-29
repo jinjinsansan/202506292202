@@ -88,12 +88,16 @@ function App() {
       
       // 同意後に自動的にSupabaseユーザーを作成して同期を開始
       if (isConnected && autoSync.isAutoSyncEnabled && !isLocalMode) {
-        setTimeout(() => {
-          autoSync.triggerManualSync().catch(error => {
-            console.error('初期同期エラー:', error);
-          });
-         }, 1000);
-       }
+        try {
+          setTimeout(() => {
+            autoSync.triggerManualSync().catch(error => {
+              console.error('初期同期エラー:', error);
+            });
+          }, 1000);
+        } catch (error) {
+          console.error('初期同期設定エラー:', error);
+        }
+      }
        
       setShowPrivacyConsent(false);
     } else {

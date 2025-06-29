@@ -45,6 +45,11 @@ export const useSupabase = (): SupabaseState => {
   // ユーザー情報の初期化
   const initializeUser = useCallback(async () => {
     if (!supabase) {
+      console.log('Supabase接続なし: ユーザー初期化をスキップ');
+      return;
+    }
+    
+    if (isLocalMode) {
       console.log('ローカルモードで動作中: ユーザー初期化をスキップ');
       return;
     }
@@ -52,8 +57,8 @@ export const useSupabase = (): SupabaseState => {
     try {
       // 現在のユーザーを取得
       const user = getCurrentUser();
-      if (!user) {
-        console.log('ユーザーがログインしていません');
+      if (!user || !user.lineUsername) {
+        console.log('ユーザーがログインしていないか、ユーザー名が取得できません');
         return;
       }
       
