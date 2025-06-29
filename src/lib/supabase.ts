@@ -1,14 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Supabase設定
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cziqndtoudnnhyuknxld.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6aXFuZHRvdWRubmh5dWtueGxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExOTEzMDMsImV4cCI6MjA2Njc2NzMwM30.2ulHlV6waeE0fKKJGc_oLATZAWAGE3ZuAxGSkw-8uPs';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 // ローカルモードの設定（デフォルトはfalse）
 export const isLocalMode = import.meta.env.VITE_LOCAL_MODE === 'true';
 
-// Supabaseクライアントの作成（ローカルモードでも接続は作成するが、実際の同期は行わない）
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey) 
+// Supabaseクライアントの作成（ローカルモードの場合はnull）
+export const supabase = (!isLocalMode && supabaseUrl && supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
 // ユーザーサービス
@@ -16,7 +16,10 @@ export const userService = {
   // ユーザーの作成または取得
   async createOrGetUser(lineUsername: string) {
     if (!supabase) return null;
-    if (isLocalMode) return { id: 'local-user-id', line_username: lineUsername };
+    if (isLocalMode) {
+      console.log('ローカルモードでユーザー作成: ', lineUsername);
+      return { id: 'local-user-id', line_username: lineUsername };
+    }
     
     try {
       // 既存ユーザーの検索
@@ -58,7 +61,10 @@ export const userService = {
   // ユーザーIDの取得
   async getUserId(lineUsername: string) {
     if (!supabase) return null;
-    if (isLocalMode) return 'local-user-id';
+    if (isLocalMode) {
+      console.log('ローカルモードでユーザーID取得: local-user-id');
+      return 'local-user-id';
+    }
     
     try {
       const { data, error } = await supabase
@@ -85,9 +91,9 @@ export const diaryService = {
   // 日記の同期
   async syncDiaries(userId: string, diaries: any[]): Promise<{ success: boolean; error?: string; data?: any }> {
     if (!supabase) return { success: false, error: 'Supabase接続なし' };
-    if (isLocalMode) {
-      console.log('ローカルモードで動作中: 同期をスキップします', diaries.length, '件のデータ');
-      return { success: false, error: 'ローカルモードで動作中' };
+    if (isLocalMode || !userId || userId === 'local-user-id') {
+      console.log('ローカルモードまたは無効なユーザーID: 同期をスキップします', diaries.length, '件のデータ');
+      return { success: false, error: 'ローカルモードまたは無効なユーザーID' };
     }
     
     try {
@@ -293,7 +299,20 @@ export const consentService = {
   // 同意履歴の保存
   async saveConsentHistory(consentRecord: any) {
     if (!supabase) return { success: false, error: 'Supabase接続なし' };
-    if (isLocalMode) return { success: false, error: 'ローカルモードで動作中' };
+    if (isLocalMode) {
+      console.log('ローカルモードで同意履歴保存: ローカルのみに保存します');
+      // ローカルストレージに保存
+      try {
+        const existingHistories = localStorage.getItem('consent_histories');
+        const histories = existingHistories ? JSON.parse(existingHistories) : [];
+        histories.push(consentRecord);
+        localStorage.setItem('consent_histories', JSON.stringify(histories));
+        return { success: true, data: consentRecord };
+      } catch (error) {
+        console.error('ローカル同意履歴保存エラー:', error);
+        return { success: false, error: String(error) };
+      }
+    }
     
     try {
       const { data, error } = await supabase
@@ -343,7 +362,10 @@ export const syncService = {
   // 同意履歴をSupabaseに同期
   async syncConsentHistories() {
     if (!supabase) return false;
-    if (isLocalMode) return false;
+    if (isLocalMode) {
+      console.log('ローカルモードで同意履歴同期: スキップします');
+      return true; // ローカルモードでは成功とみなす
+    }
     
     try {
       // ローカルストレージから同意履歴を取得
@@ -376,7 +398,10 @@ export const syncService = {
   // Supabaseから同意履歴をローカルに同期
   async syncConsentHistoriesToLocal() {
     if (!supabase) return false;
-    if (isLocalMode) return false;
+    if (isLocalMode) {
+      console.log('ローカルモードでSupabaseからの同期: スキップします');
+      return true; // ローカルモードでは成功とみなす
+    }
     
     try {
       const { data, error } = await supabase

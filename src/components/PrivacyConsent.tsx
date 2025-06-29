@@ -18,8 +18,31 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isChecked && lineUsername.trim()) {
-      // ユーザー名をローカルストレージに保存
-      localStorage.setItem('line-username', lineUsername);
+      try {
+        // ユーザー名をローカルストレージに保存
+        localStorage.setItem('line-username', lineUsername);
+        
+        // 同意履歴を記録
+        const consentRecord = {
+          id: Date.now().toString(),
+          line_username: lineUsername,
+          consent_given: true,
+          consent_date: new Date().toISOString(),
+          ip_address: 'local',
+          user_agent: navigator.userAgent
+        };
+        
+        // ローカルストレージに保存
+        const existingHistories = localStorage.getItem('consent_histories');
+        const histories = existingHistories ? JSON.parse(existingHistories) : [];
+        histories.push(consentRecord);
+        localStorage.setItem('consent_histories', JSON.stringify(histories));
+        
+        console.log('PrivacyConsent: 同意履歴を記録しました', consentRecord);
+      } catch (error) {
+        console.error('PrivacyConsent: 同意処理エラー:', error);
+      }
+      
       onConsent(true);
     } else if (!lineUsername.trim()) {
       alert('LINEユーザー名を入力してください。');
@@ -29,19 +52,25 @@ const PrivacyConsent: React.FC<PrivacyConsentProps> = ({ onConsent }) => {
   const handleReject = () => {
     // 拒否履歴を記録
     const consentRecord = {
-      id: Date.now().toString(),
-      line_username: 'declined_user_' + Date.now(),
-      consent_given: false,
-      consent_date: new Date().toISOString(),
-      ip_address: 'unknown',
-      user_agent: navigator.userAgent
-    };
-    
-    // ローカルストレージに保存
-    const existingHistories = localStorage.getItem('consent_histories');
-    const histories = existingHistories ? JSON.parse(existingHistories) : [];
-    histories.push(consentRecord);
-    localStorage.setItem('consent_histories', JSON.stringify(histories));
+      id: Date.now().toString(), 
+      line_username: lineUsername.trim() || ('declined_user_' + Date.now()),
+      consent_given: false, 
+      consent_date: new Date().toISOString(), 
+      ip_address: 'local', 
+      user_agent: navigator.userAgent 
+    }; 
+     
+    try { 
+      // ローカルストレージに保存 
+      const existingHistories = localStorage.getItem('consent_histories'); 
+      const histories = existingHistories ? JSON.parse(existingHistories) : []; 
+      histories.push(consentRecord); 
+      localStorage.setItem('consent_histories', JSON.stringify(histories)); 
+      
+      console.log('PrivacyConsent: 拒否履歴を記録しました', consentRecord);
+    } catch (error) { 
+      console.error('PrivacyConsent: 拒否履歴記録エラー:', error); 
+    }
 
     // セキュリティイベントをログ
     logSecurityEvent('privacy_consent_rejected', consentRecord.line_username, 'プライバシーポリシーを拒否');

@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, userService, diaryService, isLocalMode } from '../lib/supabase';
 import { getCurrentUser } from '../lib/deviceAuth';
-
-// 自動同期の状態を管理するインターフェース
+import { useSupabase } from './useSupabase';
 
 interface AutoSyncState {
   isAutoSyncEnabled: boolean;
@@ -19,6 +18,7 @@ export const useAutoSync = (): AutoSyncState => {
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(localStorage.getItem('last_sync_time'));
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<any | null>(null);
+  const { isConnected } = useSupabase();
   
   // 自動同期設定の読み込み
   useEffect(() => {
@@ -39,7 +39,7 @@ export const useAutoSync = (): AutoSyncState => {
   
   // 自動同期の設定
   useEffect(() => {
-    if (!isAutoSyncEnabled || !supabase) return;
+    if (!isAutoSyncEnabled || !supabase || !isConnected) return;
     if (isLocalMode) {
       console.log('useAutoSync: ローカルモードで動作中: 自動同期は無効です');
       return;
@@ -59,7 +59,7 @@ export const useAutoSync = (): AutoSyncState => {
   // ユーザー情報の初期化
   const initializeUser = useCallback(async () => {
     if (!supabase) {
-      console.log('Supabase接続なし: ローカルユーザー情報を使用');
+      console.log('useAutoSync: Supabase接続なし: ローカルユーザー情報を使用');
       const user = getCurrentUser();
       if (user) {
         setCurrentUser({ id: 'local-user-id', line_username: user.lineUsername });
@@ -68,7 +68,7 @@ export const useAutoSync = (): AutoSyncState => {
     }
     
     if (isLocalMode) {
-      console.log('ローカルモードで動作中: ローカルユーザー情報を使用');
+      console.log('useAutoSync: ローカルモードで動作中: ローカルユーザー情報を使用');
       const user = getCurrentUser();
       if (user) {
         setCurrentUser({ id: 'local-user-id', line_username: user.lineUsername });
@@ -80,18 +80,21 @@ export const useAutoSync = (): AutoSyncState => {
       // 現在のユーザーを取得
       const user = getCurrentUser();
       if (!user) {
-        console.log('ユーザーがログインしていません: ユーザー初期化をスキップ');
+        console.log('useAutoSync: ユーザーがログインしていません: ユーザー初期化をスキップ');
         return;
       }
       
       // Supabaseでユーザーを作成または取得
       const supabaseUser = await userService.createOrGetUser(user.lineUsername);
       if (supabaseUser) {
+        console.log('useAutoSync: ユーザー初期化成功:', supabaseUser);
         setCurrentUser(supabaseUser);
-        console.log('ユーザー初期化完了:', supabaseUser.line_username);
+        console.log('useAutoSync: ユーザー初期化完了:', supabaseUser.line_username);
+      } else {
+        console.log('useAutoSync: ユーザー初期化失敗: supabaseUserがnull');
       }
     } catch (error) {
-      console.error('ユーザー初期化エラー:', error);
+      console.error('useAutoSync: ユーザー初期化エラー:', error);
       setError('ユーザー初期化に失敗しました');
     }
   }, []);
@@ -99,17 +102,17 @@ export const useAutoSync = (): AutoSyncState => {
   // データ同期処理
   const syncData = useCallback(async (): Promise<boolean> => {
     if (!supabase) {
-      console.log('Supabase接続なし: データ同期をスキップします');
+      console.log('useAutoSync: Supabase接続なし: データ同期をスキップします');
       return false;
     }
     
     if (isLocalMode) {
-      console.log('ローカルモードで動作中: データ同期をスキップします');
+      console.log('useAutoSync: ローカルモードで動作中: データ同期をスキップします');
       return false;
     }
     
     if (isSyncing) {
-      console.log('既に同期中です');
+      console.log('useAutoSync: 既に同期中です');
       return false;
     }
     
@@ -158,7 +161,7 @@ export const useAutoSync = (): AutoSyncState => {
       // ローカルストレージから日記データを取得
       const savedEntries = localStorage.getItem('journalEntries');
       if (!savedEntries) {
-        console.log('useAutoSync: 同期するデータがありません: 同期をスキップします');
+        console.log('useAutoSync: 同期するデータがありません: 同期をスキップします (ユーザーID:', userId, ')');
         setLastSyncTime(new Date().toISOString());
         localStorage.setItem('last_sync_time', new Date().toISOString());
         return true;
@@ -247,8 +250,8 @@ export const useAutoSync = (): AutoSyncState => {
   // 手動同期イベントのリスナー
   useEffect(() => {
     const handleManualSyncRequest = () => {
-      console.log('useAutoSync: 手動同期リクエストを受信しました', '同期中:', isSyncing, 'ローカルモード:', isLocalMode);
-      if (!isSyncing && !isLocalMode) {
+      console.log('useAutoSync: 手動同期リクエストを受信しました', '同期中:', isSyncing, 'ローカルモード:', isLocalMode, 'Supabase接続:', isConnected);
+      if (!isSyncing && !isLocalMode && isConnected) {
         triggerManualSync().then(success => {
           console.log('useAutoSync: 手動同期結果:', success ? '成功' : '失敗');
         }).catch(error => {
@@ -260,7 +263,7 @@ export const useAutoSync = (): AutoSyncState => {
     window.addEventListener('manual-sync-request', handleManualSyncRequest);
     
     // 初回マウント時に手動同期を実行
-    if (!isLocalMode && !isSyncing) {
+    if (!isLocalMode && !isSyncing && isConnected) {
       console.log('useAutoSync: 初期同期を実行します...');
       setTimeout(async () => {
         console.log('useAutoSync: 初期同期を開始します');
@@ -274,7 +277,7 @@ export const useAutoSync = (): AutoSyncState => {
     }
     
     // 30秒後に再度同期を試行（初期同期の補完として）
-    if (!isLocalMode) {
+    if (!isLocalMode && isConnected) {
       setTimeout(async () => {
         console.log('useAutoSync: 補完同期を開始します');
         triggerManualSync().catch(error => {
@@ -286,7 +289,7 @@ export const useAutoSync = (): AutoSyncState => {
     return () => {
       window.removeEventListener('manual-sync-request', handleManualSyncRequest);
     };
-  }, [triggerManualSync, isSyncing]);
+  }, [triggerManualSync, isSyncing, isConnected]);
   
   return {
     isAutoSyncEnabled,

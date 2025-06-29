@@ -18,25 +18,27 @@ export const useSupabase = (): SupabaseState => {
   // Supabase接続の確認
   const checkConnection = useCallback(async () => {
     if (!supabase) {
+      console.log('useSupabase: Supabase接続なし');
       setIsConnected(false);
-      setError('ローカルモードで動作中: Supabase接続なし');
+      setError(isLocalMode ? 'ローカルモードで動作中: Supabase接続なし' : 'Supabase接続が設定されていません');
       return;
     }
     
     try {
       // 簡単な接続テスト
-      const { error } = await supabase.from('users').select('id').limit(1);
+      const { error } = await supabase.from('users').select('count').limit(1);
       
       if (error) {
-        console.error('Supabase接続エラー:', error);
+        console.error('useSupabase: Supabase接続エラー:', error);
         setIsConnected(false);
         setError(`Supabase接続エラー: ${error.message}`);
       } else {
+        console.log('useSupabase: Supabase接続成功');
         setIsConnected(true);
         setError(null);
       }
     } catch (err) {
-      console.error('Supabase接続確認エラー:', err);
+      console.error('useSupabase: Supabase接続確認エラー:', err);
       setIsConnected(false);
       setError('Supabase接続に失敗しました');
     }
@@ -45,12 +47,12 @@ export const useSupabase = (): SupabaseState => {
   // ユーザー情報の初期化
   const initializeUser = useCallback(async () => {
     if (!supabase) {
-      console.log('Supabase接続なし: ユーザー初期化をスキップ');
+      console.log('useSupabase: Supabase接続なし: ユーザー初期化をスキップ');
       return;
     }
     
     if (isLocalMode) {
-      console.log('ローカルモードで動作中: ユーザー初期化をスキップ');
+      console.log('useSupabase: ローカルモードで動作中: ユーザー初期化をスキップ');
       return;
     }
     
@@ -58,18 +60,21 @@ export const useSupabase = (): SupabaseState => {
       // 現在のユーザーを取得
       const user = getCurrentUser();
       if (!user || !user.lineUsername) {
-        console.log('ユーザーがログインしていないか、ユーザー名が取得できません');
+        console.log('useSupabase: ユーザーがログインしていないか、ユーザー名が取得できません');
         return;
       }
       
       // Supabaseでユーザーを作成または取得
       const supabaseUser = await userService.createOrGetUser(user.lineUsername);
       if (supabaseUser) {
+        console.log('useSupabase: ユーザー初期化成功:', supabaseUser);
         setCurrentUser(supabaseUser);
-        console.log('ユーザー初期化完了:', supabaseUser.line_username);
+        console.log('useSupabase: ユーザー初期化完了:', supabaseUser.line_username);
+      } else {
+        console.log('useSupabase: ユーザー初期化失敗: supabaseUserがnull');
       }
     } catch (error) {
-      console.error('ユーザー初期化エラー:', error);
+      console.error('useSupabase: ユーザー初期化エラー:', error);
       setError('ユーザー初期化に失敗しました');
     }
   }, []);

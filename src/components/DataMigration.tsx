@@ -28,22 +28,14 @@ const DataMigration: React.FC = () => {
   useEffect(() => {
     loadDataInfo();
     // 自動同期設定を読み込み
-    try {
-      const autoSyncSetting = localStorage.getItem('auto_sync_enabled');
-      setAutoSyncEnabled(autoSyncSetting !== 'false'); // デフォルトはtrue
-    } catch (error) {
-      console.error('自動同期設定の読み込みエラー:', error);
-    }
+    const autoSyncSetting = localStorage.getItem('auto_sync_enabled');
+    setAutoSyncEnabled(autoSyncSetting !== 'false'); // デフォルトはtrue
 
     // カウンセラーとしてログインしているかチェック
-    try {
-      const counselorName = localStorage.getItem('current_counselor');
-      if (counselorName) {
-        setIsAdminMode(true);
-        console.log('管理者モードで動作中:', counselorName);
-      }
-    } catch (error) {
-      console.error('管理者モードチェックエラー:', error);
+    const counselorName = localStorage.getItem('current_counselor');
+    if (counselorName) {
+      setIsAdminMode(true);
+      console.log('DataMigration: 管理者モードで動作中:', counselorName);
     }
   }, []);
 
@@ -323,8 +315,8 @@ const DataMigration: React.FC = () => {
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
                   <span className="text-yellow-800 font-jp-medium text-sm">
-                    ローカルモードが有効なため、自動同期は無効化されています。
-                    .envファイルでVITE_LOCAL_MODE=falseに設定することで有効になります。
+                    ローカルモードが有効なため、自動同期は無効化されています。<br />
+                    環境変数でVITE_LOCAL_MODE=falseに設定することで有効になります。
                   </span>
                 </div>
               </div>
@@ -339,7 +331,7 @@ const DataMigration: React.FC = () => {
                     <li>端末変更時にデータが引き継がれます</li>
                     <li>ブラウザのキャッシュクリアでデータが失われません</li>
                     <li>カウンセラーがあなたの日記を確認できます</li>
-                    <li>1分ごとに自動的にデータが同期されます</li>
+                    <li>30秒ごとに自動的にデータが同期されます</li>
                     {isLocalMode && <li>※ローカルモードを無効にすると利用できます</li>}
                   </ul>
                 </div>

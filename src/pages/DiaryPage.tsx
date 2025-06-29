@@ -408,7 +408,7 @@ const DiaryPage: React.FC = () => {
       // 自動同期を手動で実行（即時同期）- ローカルモードでなければ
       try {
         const autoSyncEnabled = localStorage.getItem('auto_sync_enabled') !== 'false';
-        if (autoSyncEnabled && !isLocalMode && supabase) {
+        if (autoSyncEnabled && !isLocalMode) {
           // 自動同期イベントを発火（即時同期）
           setTimeout(() => {
             console.log('DiaryPage: 日記保存後の同期リクエストを送信します');
@@ -1211,8 +1211,8 @@ const DiaryPage: React.FC = () => {
       {/* ローカル保存モード表示 */}
       <div className="fixed bottom-4 right-4 bg-green-100 border border-green-200 rounded-lg p-3 shadow-lg">
         <div className="flex items-center space-x-2">
-          <div className={`w-2 h-2 ${isLocalMode ? 'bg-yellow-500 animate-pulse' : 'bg-green-500'} rounded-full`}></div>
-          <span className="text-green-800 font-jp-medium text-xs sm:text-sm" onClick={() => console.log('現在のモード:', isLocalMode ? 'ローカルモード' : 'Supabase同期モード')}>
+          <div className={`w-2 h-2 ${isLocalMode ? 'bg-yellow-500' : 'bg-green-500'} rounded-full`}></div>
+          <span className="text-green-800 font-jp-medium text-xs sm:text-sm">
             {isLocalMode ? 'ローカルモード（同期なし）' : 'Supabase同期モード'}
           </span>
         </div>

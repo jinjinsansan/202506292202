@@ -73,7 +73,7 @@ function App() {
   // 自動同期の状態を確認
   useEffect(() => {
     if (isConnected && autoSync.currentUser && autoSync.isAutoSyncEnabled && !isLocalMode) {
-      console.log('App.tsx: 自動同期が有効になりました。1分ごとにデータが同期されます。');
+      console.log('App.tsx: 自動同期が有効になりました。30秒ごとにデータが同期されます。');
       
       // 手動同期イベントを発火
       const triggerSync = () => {
@@ -102,7 +102,7 @@ function App() {
       // 同意後に自動的にSupabaseユーザーを作成して同期を開始
       if (isConnected && autoSync.isAutoSyncEnabled && !isLocalMode) {
         try {
-          console.log('App.tsx: プライバシー同意後の初期同期を設定します');
+          console.log('App.tsx: プライバシー同意後の初期同期を設定します', 'ユーザー名:', lineUsername);
           setTimeout(() => {
             console.log('App.tsx: プライバシー同意後の初期同期を実行します');
             const event = new CustomEvent('manual-sync-request');
@@ -578,7 +578,7 @@ function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* ウェルカムページ表示 */}
         {activeTab === 'home' && showWelcomePage ? (
-          <WelcomePage />
+          <WelcomePage key="welcome-page" />
         ) : (
           <div className="space-y-6">
             {/* 管理者モード表示 */}
