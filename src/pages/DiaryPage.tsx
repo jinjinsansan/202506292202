@@ -18,7 +18,7 @@ const DiaryPage: React.FC = () => {
   const [formData, setFormData] = useState({
     date: getJapaneseDate().toISOString().split('T')[0],
     event: '',
-    emotion: '', 
+    emotion: '',
     selfEsteemScore: 50,
     worthlessnessScore: 50,
     realization: ''
@@ -26,6 +26,14 @@ const DiaryPage: React.FC = () => {
 
   // 無価値感スコア用の状態
   const [worthlessnessScores, setWorthlessnessScores] = useState({
+    yesterdaySelfEsteem: 50,
+    yesterdayWorthlessness: 50,
+    todaySelfEsteem: 50,
+    todayWorthlessness: 50
+  });
+  
+  // ポジティブ感情スコア用の状態
+  const [positiveScores, setPositiveScores] = useState({
     yesterdaySelfEsteem: 50,
     yesterdayWorthlessness: 50,
     todaySelfEsteem: 50,
@@ -318,6 +326,13 @@ const DiaryPage: React.FC = () => {
         newEntry.worthlessnessScore = Number(finalWorthlessnessScores.todayWorthlessness) || 0;
       }
       
+      // ポジティブ感情を選んだ場合もスコアを追加
+      if (['嬉しい', '感謝', '達成感', '幸せ'].includes(finalFormData.emotion)) {
+        // 数値型として保存（NaNを防ぐため0をデフォルト値に）
+        newEntry.selfEsteemScore = Number(positiveScores.todaySelfEsteem) || 0;
+        newEntry.worthlessnessScore = Number(positiveScores.todayWorthlessness) || 0;
+      }
+      
       console.log('保存する日記データ:', newEntry);
       entries.unshift(newEntry);
       localStorage.setItem('journalEntries', JSON.stringify(entries));
@@ -339,6 +354,14 @@ const DiaryPage: React.FC = () => {
         setWorthlessnessScores({
           yesterdaySelfEsteem: Number(finalWorthlessnessScores.todaySelfEsteem) || 0,
           yesterdayWorthlessness: Number(finalWorthlessnessScores.todayWorthlessness) || 0,
+          todaySelfEsteem: 50,
+          todayWorthlessness: 50
+        });
+      } else if (['嬉しい', '感謝', '達成感', '幸せ'].includes(finalFormData.emotion)) {
+        // ポジティブ感情を選んだ場合も、次回のために今回のスコアを前日のスコアとして設定
+        setPositiveScores({
+          yesterdaySelfEsteem: Number(positiveScores.todaySelfEsteem) || 0,
+          yesterdayWorthlessness: Number(positiveScores.todayWorthlessness) || 0,
           todaySelfEsteem: 50,
           todayWorthlessness: 50
         });
@@ -542,6 +565,31 @@ const DiaryPage: React.FC = () => {
       [worthlessnessField]: calculatedWorthlessness
     }));
   };
+  
+  // ポジティブ感情の自己肯定感スコア変更時の無価値感スコア自動計算
+  const handlePositiveSelfEsteemChange = (field: 'yesterdaySelfEsteem' | 'todaySelfEsteem', value: number) => {
+    const worthlessnessField = field === 'yesterdaySelfEsteem' ? 'yesterdayWorthlessness' : 'todayWorthlessness';
+    
+    // 値が空の場合は両方のフィールドを空にする
+    if (value === null || isNaN(value)) {
+      setPositiveScores(prev => ({
+        ...prev,
+        [field]: '',
+        [worthlessnessField]: ''
+      }));
+      return;
+    }
+    
+    // 値を0〜100の間に制限
+    const clampedValue = Math.min(Math.max(value, 0), 100);
+    const calculatedWorthlessness = 100 - clampedValue;
+    
+    setPositiveScores(prev => ({
+      ...prev,
+      [field]: clampedValue,
+      [worthlessnessField]: calculatedWorthlessness
+    }));
+  };
 
   // 無価値感スコア直接変更時の自己肯定感スコア自動計算
   const handleWorthlessnessChange = (field: 'yesterdayWorthlessness' | 'todayWorthlessness', value: number) => {
@@ -562,6 +610,31 @@ const DiaryPage: React.FC = () => {
     const calculatedSelfEsteem = 100 - clampedValue;
     
     setWorthlessnessScores(prev => ({
+      ...prev,
+      [field]: clampedValue,
+      [selfEsteemField]: calculatedSelfEsteem
+    }));
+  };
+  
+  // ポジティブ感情の無価値感スコア直接変更時の自己肯定感スコア自動計算
+  const handlePositiveWorthlessnessChange = (field: 'yesterdayWorthlessness' | 'todayWorthlessness', value: number) => {
+    const selfEsteemField = field === 'yesterdayWorthlessness' ? 'yesterdaySelfEsteem' : 'todaySelfEsteem';
+    
+    // 値が空の場合は両方のフィールドを空にする
+    if (value === null || isNaN(value)) {
+      setPositiveScores(prev => ({
+        ...prev,
+        [field]: '',
+        [selfEsteemField]: ''
+      }));
+      return;
+    }
+    
+    // 値を0〜100の間に制限
+    const clampedValue = Math.min(Math.max(value, 0), 100);
+    const calculatedSelfEsteem = 100 - clampedValue;
+    
+    setPositiveScores(prev => ({
       ...prev,
       [field]: clampedValue,
       [selfEsteemField]: calculatedSelfEsteem
@@ -880,6 +953,102 @@ const DiaryPage: React.FC = () => {
                       value={worthlessnessScores.todayWorthlessness || ''}
                       onChange={(e) => handleWorthlessnessChange('todayWorthlessness', e.target.value === '' ? NaN : parseInt(e.target.value))}
                       className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent font-jp-normal [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="50"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-4 bg-blue-50 rounded-lg p-3 border border-blue-200">
+              <div className="text-xs text-blue-800 font-jp-normal space-y-1">
+                <p className="font-jp-medium">💡 自動計算機能</p>
+                <p>• 自己肯定感スコアを入力すると、無価値感スコアが自動で計算されます</p>
+                <p>• 計算式：無価値感スコア = 100 - 自己肯定感スコア</p>
+                <p>• どちらの項目からでも入力可能です</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* ポジティブ感情を選んだ場合のスコア入力 */}
+        {['嬉しい', '感謝', '達成感', '幸せ'].includes(formData.emotion) && (
+          <div className="bg-green-50 rounded-lg p-4 sm:p-6 border border-green-200 mb-6">
+            <h3 className="text-green-800 font-jp-bold mb-4">
+              「{formData.emotion}」を選んだ場合のみ入力
+            </h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* 前日のスコア */}
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="text-sm font-jp-bold text-gray-700 mb-3 flex items-center">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
+                  前日のスコア
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-jp-medium text-gray-600 mb-1">
+                      自己肯定感
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={positiveScores.yesterdaySelfEsteem || ''}
+                      onChange={(e) => handlePositiveSelfEsteemChange('yesterdaySelfEsteem', e.target.value === '' ? NaN : parseInt(e.target.value))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-transparent font-jp-normal [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-jp-medium text-gray-600 mb-1">
+                      無価値感
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={positiveScores.yesterdayWorthlessness || ''}
+                      onChange={(e) => handlePositiveWorthlessnessChange('yesterdayWorthlessness', e.target.value === '' ? NaN : parseInt(e.target.value))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-transparent font-jp-normal [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="50"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 今日のスコア */}
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <h4 className="text-sm font-jp-bold text-gray-700 mb-3 flex items-center">
+                  <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                  今日のスコア
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-jp-medium text-gray-600 mb-1">
+                      自己肯定感
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={positiveScores.todaySelfEsteem || ''}
+                      onChange={(e) => handlePositiveSelfEsteemChange('todaySelfEsteem', e.target.value === '' ? NaN : parseInt(e.target.value))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-transparent font-jp-normal [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-jp-medium text-gray-600 mb-1">
+                      無価値感
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={positiveScores.todayWorthlessness || ''}
+                      onChange={(e) => handlePositiveWorthlessnessChange('todayWorthlessness', e.target.value === '' ? NaN : parseInt(e.target.value))}
+                      className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-green-500 focus:border-transparent font-jp-normal [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       placeholder="50"
                     />
                   </div>
