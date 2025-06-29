@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Upload, Download, RefreshCw, CheckCircle, AlertTriangle, Shield, Info, Save } from 'lucide-react';
-import { supabase, userService, syncService } from '../lib/supabase';
+import { supabase, userService, syncService, isLocalMode } from '../lib/supabase';
 import { useSupabase } from '../hooks/useSupabase';
 import { getCurrentUser } from '../lib/deviceAuth';
 
