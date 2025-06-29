@@ -8,6 +8,7 @@ import MaintenanceController from './MaintenanceController';
 import ConsentHistoryManagement from './ConsentHistoryManagement';
 import DeviceAuthManagement from './DeviceAuthManagement';
 import SecurityDashboard from './SecurityDashboard';
+import AdminBackupRestore from './AdminBackupRestore';
 import DataCleanup from './DataCleanup';
 import { supabase } from '../lib/supabase';
 
@@ -492,7 +493,7 @@ const AdminPanel: React.FC = () => {
         </div>
 
         <Tabs defaultValue="search" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-7 gap-1 mb-6 overflow-x-auto">
+          <TabsList className="grid grid-cols-8 gap-1 mb-6 overflow-x-auto">
             <TabsTrigger value="search" className="flex items-center justify-center px-2 py-1.5">
               <Search className="w-4 h-4" />
               <span className="hidden md:inline">日記</span>
@@ -520,6 +521,10 @@ const AdminPanel: React.FC = () => {
             <TabsTrigger value="security" className="flex items-center justify-center px-2 py-1.5">
               <AlertTriangle className="w-4 h-4" />
               <span className="hidden md:inline">安全</span>
+            </TabsTrigger>
+            <TabsTrigger value="backup" className="flex items-center justify-center px-2 py-1.5">
+              <Database className="w-4 h-4" />
+              <span className="hidden md:inline">バックアップ</span>
             </TabsTrigger>
           </TabsList>
 
@@ -696,6 +701,10 @@ const AdminPanel: React.FC = () => {
 
           <TabsContent value="security">
             <SecurityDashboard />
+          </TabsContent>
+          
+          <TabsContent value="backup">
+            <AdminBackupRestore />
           </TabsContent>
         </Tabs>
       </div>
