@@ -93,7 +93,30 @@ export const diaryService = {
     try {
       // 日記データの整形
       const formattedDiaries = diaries.map(diary => {
-        console.log('日記データ変換:', diary);
+        console.log('Supabase同期 - 日記データ変換:', diary);
+        
+        // 自己肯定感スコアと無価値感スコアの処理
+        let selfEsteemScore = diary.self_esteem_score;
+        let worthlessnessScore = diary.worthlessness_score;
+        
+        // フィールド名の違いに対応
+        if (selfEsteemScore === undefined && diary.selfEsteemScore !== undefined) {
+          selfEsteemScore = diary.selfEsteemScore;
+        }
+        
+        if (worthlessnessScore === undefined && diary.worthlessnessScore !== undefined) {
+          worthlessnessScore = diary.worthlessnessScore;
+        }
+        
+        // デフォルト値の設定
+        if (selfEsteemScore === undefined || selfEsteemScore === null) {
+          selfEsteemScore = 50;
+        }
+        
+        if (worthlessnessScore === undefined || worthlessnessScore === null) {
+          worthlessnessScore = 50;
+        }
+        
         return {
           id: diary.id,
           user_id: userId,
@@ -101,8 +124,8 @@ export const diaryService = {
           emotion: diary.emotion,
           event: diary.event,
           realization: diary.realization,
-          self_esteem_score: diary.self_esteem_score || diary.selfEsteemScore || 50,
-          worthlessness_score: diary.worthlessness_score || diary.worthlessnessScore || 50,
+          self_esteem_score: selfEsteemScore,
+          worthlessness_score: worthlessnessScore,
           created_at: diary.created_at || new Date().toISOString(),
           counselor_memo: diary.counselor_memo || null,
           is_visible_to_user: diary.is_visible_to_user || false,
@@ -124,14 +147,14 @@ export const diaryService = {
       
       if (error) {
         console.error('日記同期エラー:', error, formattedDiaries);
-        return { success: false, error: error.message };
+        return { success: false, error: `同期エラー: ${error.message}` };
       }
       
-      console.log('Supabase同期成功:', formattedDiaries.length, '件のデータを同期しました', data);
+      console.log('Supabase同期成功:', formattedDiaries.length, '件のデータを同期しました');
       return { success: true, data };
     } catch (error) {
       console.error('日記同期サービスエラー:', error);
-      return { success: false, error: String(error) };
+      return { success: false, error: `同期サービスエラー: ${String(error)}` };
     }
   },
   

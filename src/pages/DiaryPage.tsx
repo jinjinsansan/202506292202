@@ -369,23 +369,30 @@ const DiaryPage: React.FC = () => {
       // ローカルストレージに保存
       const existingEntries = localStorage.getItem('journalEntries');
       const entries = existingEntries ? JSON.parse(existingEntries) : [];
-      
+
       const newEntry = {
-        id: Date.now().toString(), 
+        id: Date.now().toString(),
         date: finalFormData.date,
         emotion: finalFormData.emotion,
         event: finalFormData.event,
-        realization: finalFormData.realization
+        realization: finalFormData.realization,
+        created_at: new Date().toISOString()
       };
       
       // 無価値感を選んだ場合はスコアを追加
       if (finalFormData.emotion === '無価値感') {
         // 数値型として保存（NaNを防ぐため0をデフォルト値に）
+        newEntry.self_esteem_score = Number(worthlessnessScores.todaySelfEsteem) || 0;
+        newEntry.worthlessness_score = Number(worthlessnessScores.todayWorthlessness) || 0;
+        // 互換性のために両方のフィールド名で保存
         newEntry.selfEsteemScore = Number(worthlessnessScores.todaySelfEsteem) || 0;
         newEntry.worthlessnessScore = Number(worthlessnessScores.todayWorthlessness) || 0;
       } else if (isPositiveEmotion) {
         // ポジティブ感情の場合もスコアを保存
         const positiveScore = Number(positiveScores.todayPositiveScore) || 0;
+        newEntry.self_esteem_score = positiveScore;
+        newEntry.worthlessness_score = 100 - positiveScore;
+        // 互換性のために両方のフィールド名で保存
         newEntry.selfEsteemScore = positiveScore;
         newEntry.worthlessnessScore = 100 - positiveScore;
       }
@@ -398,12 +405,19 @@ const DiaryPage: React.FC = () => {
       try {
         const autoSyncEnabled = localStorage.getItem('auto_sync_enabled') !== 'false';
         if (autoSyncEnabled && !isLocalMode) {
-          // 自動同期イベントを発火
+          // 自動同期イベントを発火（即時同期）
           setTimeout(() => {
-            console.log('日記保存後の同期リクエストを送信します');
+            console.log('DiaryPage: 日記保存後の同期リクエストを送信します');
             const syncEvent = new CustomEvent('manual-sync-request');
             window.dispatchEvent(syncEvent);
-          }, 1000);
+          }, 500);
+          
+          // 念のため3秒後にも同期を実行
+          setTimeout(() => {
+            console.log('DiaryPage: 日記保存後の補完同期リクエストを送信します');
+            const syncEvent = new CustomEvent('manual-sync-request');
+            window.dispatchEvent(syncEvent);
+          }, 3000);
         }
       } catch (error) {
         console.error('同期リクエスト送信エラー:', error);

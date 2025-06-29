@@ -42,10 +42,10 @@ export const useAutoSync = (): AutoSyncState => {
     if (!isAutoSyncEnabled || !supabase) return;
     if (isLocalMode) {
       console.log('ローカルモードで動作中: 自動同期は無効です');
-      return; // ローカルモードの場合は自動同期を行わない
+      return;
     }
     
-    // 5分ごとに自動同期を実行
+    // 1分ごとに自動同期を実行
     const interval = setInterval(() => {
       if (!isSyncing) {
         console.log('自動同期を実行します...');
@@ -164,14 +164,15 @@ export const useAutoSync = (): AutoSyncState => {
       // 日記データを整形（ローカルストレージのデータ形式をSupabase形式に変換）
       entries = entries.map((entry: any) => {
         // 必要なフィールドを確保
+        console.log('エントリー変換前:', entry);
         return {
           id: entry.id,
           date: entry.date,
           emotion: entry.emotion,
           event: entry.event,
           realization: entry.realization,
-          self_esteem_score: entry.selfEsteemScore || 50,
-          worthlessness_score: entry.worthlessnessScore || 50,
+          self_esteem_score: entry.self_esteem_score || entry.selfEsteemScore || 50,
+          worthlessness_score: entry.worthlessness_score || entry.worthlessnessScore || 50,
           created_at: entry.created_at || new Date().toISOString(),
           counselor_memo: entry.counselor_memo || null,
           is_visible_to_user: entry.is_visible_to_user || false,
@@ -183,6 +184,7 @@ export const useAutoSync = (): AutoSyncState => {
       
       // 日記データを同期
       console.log('同期を開始します:', entries.length, '件のデータ');
+      console.log('同期データサンプル:', entries.slice(0, 1));
       const { success, error } = await diaryService.syncDiaries(userId, entries);
       console.log('同期結果:', success ? '成功' : '失敗', error ? `エラー: ${error}` : '');
       
@@ -229,11 +231,25 @@ export const useAutoSync = (): AutoSyncState => {
     // 初回マウント時に手動同期を実行
     if (!isLocalMode && !isSyncing) {
       console.log('初期同期を実行します...');
-      setTimeout(() => {
-        triggerManualSync().catch(error => {
+      setTimeout(async () => {
+        console.log('初期同期を開始します');
+        try {
+          const success = await triggerManualSync();
+          console.log('初期同期結果:', success ? '成功' : '失敗');
+        } catch (error) {
           console.error('初期同期エラー:', error);
-        });
+        }
       }, 3000);
+    }
+    
+    // 30秒後に再度同期を試行（初期同期の補完として）
+    if (!isLocalMode) {
+      setTimeout(async () => {
+        console.log('補完同期を開始します');
+        triggerManualSync().catch(error => {
+          console.error('補完同期エラー:', error);
+        });
+      }, 30000);
     }
     
     return () => {

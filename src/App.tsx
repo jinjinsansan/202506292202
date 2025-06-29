@@ -73,14 +73,20 @@ function App() {
   // 自動同期の状態を確認
   useEffect(() => {
     if (isConnected && autoSync.currentUser && autoSync.isAutoSyncEnabled && !isLocalMode) {
-      console.log('自動同期が有効になりました。1分ごとにデータが同期されます。');
-      // 初回の手動同期を実行
-      setTimeout(() => {
-        console.log('App.tsx: 初期同期を実行します');
-        autoSync.triggerManualSync().catch(error => {
-          console.error('初期同期エラー:', error);
-        });
-      }, 3000);
+      console.log('App.tsx: 自動同期が有効になりました。1分ごとにデータが同期されます。');
+      
+      // 手動同期イベントを発火
+      const triggerSync = () => {
+        console.log('App.tsx: 手動同期イベントを発火します');
+        const event = new CustomEvent('manual-sync-request');
+        window.dispatchEvent(event);
+      };
+      
+      // 初回同期を5秒後に実行
+      setTimeout(triggerSync, 5000);
+      
+      // 30秒後に再度同期を実行（初回同期の補完として）
+      setTimeout(triggerSync, 30000);
     }
   }, [isConnected, autoSync.currentUser, autoSync.isAutoSyncEnabled]);
 
@@ -96,13 +102,12 @@ function App() {
       // 同意後に自動的にSupabaseユーザーを作成して同期を開始
       if (isConnected && autoSync.isAutoSyncEnabled && !isLocalMode) {
         try {
-          console.log('プライバシー同意後の初期同期を設定します');
+          console.log('App.tsx: プライバシー同意後の初期同期を設定します');
           setTimeout(() => {
-            console.log('プライバシー同意後の初期同期を実行します');
-            autoSync.triggerManualSync().catch(error => {
-              console.error('初期同期エラー:', error);
-            });
-          }, 2000);
+            console.log('App.tsx: プライバシー同意後の初期同期を実行します');
+            const event = new CustomEvent('manual-sync-request');
+            window.dispatchEvent(event);
+          }, 3000);
         } catch (error) {
           console.error('初期同期設定エラー:', error);
         }
