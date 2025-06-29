@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, userService, diaryService } from '../lib/supabase';
+import { supabase, userService, diaryService, isLocalMode } from '../lib/supabase';
 import { getCurrentUser } from '../lib/deviceAuth';
 
 interface AutoSyncState {

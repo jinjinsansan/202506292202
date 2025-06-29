@@ -6,10 +6,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 // ローカルモードの設定（デフォルトはfalse）
 export const isLocalMode = import.meta.env.VITE_LOCAL_MODE === 'true';
 
-// Supabaseクライアントの作成（ローカルモードでない場合のみ）
+// Supabaseクライアントの作成（ローカルモードでも接続は作成するが、実際の同期は行わない）
 export const supabase = supabaseUrl && supabaseAnonKey
   ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null; // ローカルモードでも接続は作成するが、実際の同期は行わない
+  : null;
 
 // ユーザーサービス
 export const userService = {
@@ -83,6 +83,7 @@ export const diaryService = {
   // 日記の同期
   async syncDiaries(userId: string, diaries: any[]) {
     if (!supabase) return { success: false, error: 'Supabase接続なし' };
+    if (isLocalMode) return { success: false, error: 'ローカルモードで動作中' };
     
     try {
       // 日記データの整形
@@ -114,6 +115,7 @@ export const diaryService = {
   // ユーザーの日記を取得
   async getUserDiaries(userId: string) {
     if (!supabase) return [];
+    if (isLocalMode) return [];
     
     try {
       const { data, error } = await supabase
@@ -140,6 +142,7 @@ export const chatService = {
   // チャットメッセージの取得
   async getChatMessages(chatRoomId: string) {
     if (!supabase) return [];
+    if (isLocalMode) return [];
     
     try {
       const { data, error } = await supabase
@@ -163,6 +166,7 @@ export const chatService = {
   // メッセージの送信
   async sendMessage(chatRoomId: string, content: string, senderId?: string, counselorId?: string) {
     if (!supabase) return null;
+    if (isLocalMode) return null;
     
     try {
       const isCounselor = !!counselorId;
@@ -199,6 +203,7 @@ export const consentService = {
   // 同意履歴の保存
   async saveConsentHistory(consentRecord: any) {
     if (!supabase) return { success: false, error: 'Supabase接続なし' };
+    if (isLocalMode) return { success: false, error: 'ローカルモードで動作中' };
     
     try {
       const { data, error } = await supabase
@@ -222,6 +227,7 @@ export const consentService = {
   // 同意履歴の取得
   async getAllConsentHistories() {
     if (!supabase) return [];
+    if (isLocalMode) return [];
     
     try {
       const { data, error } = await supabase
@@ -247,6 +253,7 @@ export const syncService = {
   // 同意履歴をSupabaseに同期
   async syncConsentHistories() {
     if (!supabase) return false;
+    if (isLocalMode) return false;
     
     try {
       // ローカルストレージから同意履歴を取得
@@ -279,6 +286,7 @@ export const syncService = {
   // Supabaseから同意履歴をローカルに同期
   async syncConsentHistoriesToLocal() {
     if (!supabase) return false;
+    if (isLocalMode) return false;
     
     try {
       const { data, error } = await supabase
