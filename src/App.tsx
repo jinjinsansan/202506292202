@@ -1,11 +1,9 @@
 Here's the fixed version with added closing brackets and braces:
 
 ```javascript
-{activeTab === 'admin' && isAdmin && <AdminPanel />}
-            {activeTab === 'backup' && isAdmin && <UserDataManagement />}
-          </div>
+          <span className="text-green-800 font-jp-medium text-sm">{isLocalMode ? 'ローカル保存モード' : 'Supabase同期モード'}</span>
         </div>
-      </div>
+        </div>
       </main>
     </div>
   );
