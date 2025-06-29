@@ -20,50 +20,73 @@ const DataMigration: React.FC = () => {
   const [backupInProgress, setBackupInProgress] = useState(false);
 
   // 全体のデータ数を保持する状態
-  const [totalLocalDataCount, setTotalLocalDataCount] = useState(0);
-  const [totalSupabaseDataCount, setTotalSupabaseDataCount] = useState(0);
+  const [totalLocalDataCount, setTotalLocalDataCount] = useState<number>(0);
+  const [totalSupabaseDataCount, setTotalSupabaseDataCount] = useState<number>(0);
 
   const { isConnected, currentUser, initializeUser } = useSupabase();
 
   useEffect(() => {
     loadDataInfo();
     // 自動同期設定を読み込み
-    const autoSyncSetting = localStorage.getItem('auto_sync_enabled');
-    setAutoSyncEnabled(autoSyncSetting !== 'false'); // デフォルトはtrue
+    try {
+      const autoSyncSetting = localStorage.getItem('auto_sync_enabled');
+      setAutoSyncEnabled(autoSyncSetting !== 'false'); // デフォルトはtrue
+    } catch (error) {
+      console.error('自動同期設定の読み込みエラー:', error);
+    }
 
     // カウンセラーとしてログインしているかチェック
-    const counselorName = localStorage.getItem('current_counselor');
-    if (counselorName) {
-      setIsAdminMode(true);
+    try {
+      const counselorName = localStorage.getItem('current_counselor');
+      if (counselorName) {
+        setIsAdminMode(true);
+        console.log('管理者モードで動作中:', counselorName);
+      }
+    } catch (error) {
+      console.error('管理者モードチェックエラー:', error);
     }
   }, []);
 
   const loadDataInfo = async () => {
     try {
       if (isAdminMode) {
-        // 管理者モードの場合は全体のデータ数を取得
-        await loadTotalData();
+        try {
+          // 管理者モードの場合は全体のデータ数を取得
+          await loadTotalData();
+        } catch (error) {
+          console.error('全体データ読み込みエラー:', error);
+        }
       } else {
-        // 通常モードの場合は現在のユーザーのデータ数を取得
-        const localEntries = localStorage.getItem('journalEntries');
-        if (localEntries) {
-          const entries = JSON.parse(localEntries);
-          setLocalDataCount(entries.length);
+        try {
+          // 通常モードの場合は現在のユーザーのデータ数を取得
+          const localEntries = localStorage.getItem('journalEntries');
+          if (localEntries) {
+            const entries = JSON.parse(localEntries);
+            setLocalDataCount(entries.length);
+          }
+        } catch (error) {
+          console.error('ローカルデータ読み込みエラー:', error);
+          setLocalDataCount(0);
         }
 
         // Supabaseデータ数を取得（接続されている場合のみ）
-        if (isConnected && currentUser) {
-          supabase.from('diary_entries')
-            .select('id', { count: 'exact' })
-            .eq('user_id', currentUser.id)
-            .then(({ count, error }) => {
-              console.log('Supabase日記データ数:', count || 0);
-              setSupabaseDataCount(count || 0);
-            })
-            .catch((error) => {
-              console.error('Supabase日記データ数取得エラー:', error);
-              setSupabaseDataCount(0);
-            });
+        try {
+          if (isConnected && currentUser && supabase) {
+            supabase.from('diary_entries')
+              .select('id', { count: 'exact' })
+              .eq('user_id', currentUser.id)
+              .then(({ count, error }) => {
+                console.log('Supabase日記データ数:', count || 0);
+                setSupabaseDataCount(count || 0);
+              })
+              .catch((error) => {
+                console.error('Supabase日記データ数取得エラー:', error);
+                setSupabaseDataCount(0);
+              });
+          }
+        } catch (error) {
+          console.error('Supabaseデータ取得エラー:', error);
+          setSupabaseDataCount(0);
         }
       }
     } catch (error) {
@@ -74,9 +97,9 @@ const DataMigration: React.FC = () => {
   // 自動同期の有効/無効を切り替える
   const toggleAutoSync = (enabled: boolean) => {
     localStorage.setItem('auto_sync_enabled', enabled.toString());
-    setAutoSyncEnabled(enabled);
-    
     try {
+      setAutoSyncEnabled(enabled);
+    
       const user = getCurrentUser();
       console.log(`自動同期が${enabled ? '有効' : '無効'}になりました - ユーザー: ${user?.lineUsername || 'unknown'}`);
     } catch (error) {
@@ -89,33 +112,65 @@ const DataMigration: React.FC = () => {
   // 全体のデータ数を取得する関数
   const loadTotalData = async () => {
     try {
-      // ローカルストレージから全ユーザーのデータを取得
-      const allLocalData = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('journalEntries_')) {
-          const data = localStorage.getItem(key);
-          if (data) {
-            const entries = JSON.parse(data);
-            allLocalData.push(...entries);
+      let allLocalData: any[] = [];
+      try {
+        // ローカルストレージから全ユーザーのデータを取得
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('journalEntries_')) {
+            const data = localStorage.getItem(key);
+            if (data) {
+              const entries = JSON.parse(data);
+              allLocalData.push(...entries);
+            }
           }
         }
+      } catch (error) {
+        console.error('ローカルデータ取得エラー:', error);
       }
-      setTotalLocalDataCount(allLocalData.length);
+      
+      // 通常の日記データも取得
+      try {
+        const journalEntries = localStorage.getItem('journalEntries');
+        if (journalEntries) {
+          const entries = JSON.parse(journalEntries);
+          allLocalData = [...allLocalData, ...entries];
+        }
+      } catch (error) {
+        console.error('日記データ取得エラー:', error);
+      }
+      
+      const totalCount = allLocalData.length;
+      setTotalLocalDataCount(totalCount);
+      setLocalDataCount(totalCount);
 
       // Supabaseから全データ数を取得
-      const { count, error } = await supabase
-        .from('diary_entries')
-        .select('id', { count: 'exact' });
-      
-      if (error) {
-        console.error('Supabase全データ数取得エラー:', error);
-        setTotalSupabaseDataCount(0);
-      } else {
-        setTotalSupabaseDataCount(count || 0);
+      if (supabase && !isLocalMode) {
+        try {
+          const { count, error } = await supabase
+            .from('diary_entries')
+            .select('id', { count: 'exact' });
+          
+          if (error) {
+            console.error('Supabase全データ数取得エラー:', error);
+            setTotalSupabaseDataCount(0);
+            setSupabaseDataCount(0);
+          } else {
+            setTotalSupabaseDataCount(count || 0);
+            setSupabaseDataCount(count || 0);
+          }
+        } catch (error) {
+          console.error('Supabase全データ数取得エラー:', error);
+          setTotalSupabaseDataCount(0);
+          setSupabaseDataCount(0);
+        }
       }
     } catch (error) {
       console.error('全体データ読み込みエラー:', error);
+      setTotalLocalDataCount(0);
+      setTotalSupabaseDataCount(0);
+      setLocalDataCount(0);
+      setSupabaseDataCount(0);
     }
   };
 
@@ -211,7 +266,7 @@ const DataMigration: React.FC = () => {
             <h3 className="font-jp-bold text-gray-900 mb-2">
               {isAdminMode ? '全体のローカルデータ' : 'ローカルデータ'}
             </h3>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap">
               <span className="text-gray-700 font-jp-normal">
                 {isAdminMode ? '総日記数:' : '日記数:'}
               </span>
@@ -222,7 +277,7 @@ const DataMigration: React.FC = () => {
             <h3 className="font-jp-bold text-gray-900 mb-2">
               {isAdminMode ? '全体のSupabaseデータ' : 'Supabaseデータ'}
             </h3>
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center flex-wrap">
               <span className="text-gray-700 font-jp-normal">
                 {isAdminMode ? '総日記数:' : '日記数:'}
               </span>
@@ -247,7 +302,9 @@ const DataMigration: React.FC = () => {
             <div className="flex items-center justify-between bg-white rounded-lg p-4 border border-gray-200">
               <div className="flex items-center space-x-3">
                 <div className={`w-3 h-3 rounded-full ${autoSyncEnabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                <span className="font-jp-medium text-gray-900">自動同期 {isLocalMode ? '(ローカルモード中は無効)' : ''}</span>
+                <span className="font-jp-medium text-gray-900">
+                  自動同期 {isLocalMode ? '(ローカルモード中は無効)' : ''}
+                </span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -265,7 +322,10 @@ const DataMigration: React.FC = () => {
               <div className="mt-2 bg-yellow-50 rounded-lg p-3 border border-yellow-200">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-                  <span className="text-yellow-800 font-jp-medium text-sm">ローカルモードが有効なため、自動同期は無効化されています。<br/>.envファイルでVITE_LOCAL_MODE=falseに設定することで有効になります。</span>
+                  <span className="text-yellow-800 font-jp-medium text-sm">
+                    ローカルモードが有効なため、自動同期は無効化されています。
+                    .envファイルでVITE_LOCAL_MODE=falseに設定することで有効になります。
+                  </span>
                 </div>
               </div>
             )}
@@ -279,6 +339,7 @@ const DataMigration: React.FC = () => {
                     <li>端末変更時にデータが引き継がれます</li>
                     <li>ブラウザのキャッシュクリアでデータが失われません</li>
                     <li>カウンセラーがあなたの日記を確認できます</li>
+                    {isLocalMode && <li>※ローカルモードを無効にすると利用できます</li>}
                   </ul>
                 </div>
               </div>
@@ -417,8 +478,8 @@ const DataMigration: React.FC = () => {
                     <li>ローカルデータはブラウザに保存されています</li>
                     <li>Supabaseデータはクラウドに保存されます</li>
                     <li>管理者モードでは全体のデータ数が表示されます</li>
-                    <li>ブラウザのキャッシュをクリアするとローカルデータは失われます</li>
-                    <li>端末を変更する場合は、先にデータをSupabaseに移行してください</li>
+                    <li>ブラウザのキャッシュをクリアするとローカルデータは失われます{!isLocalMode && '（Supabaseに同期されていれば復元可能）'}</li>
+                    <li>端末を変更する場合は、{isLocalMode ? 'バックアップを作成してください' : '先にデータをSupabaseに移行してください'}</li>
                   </>
                 ) : (
                   <>
@@ -428,7 +489,12 @@ const DataMigration: React.FC = () => {
                     <li>{isLocalMode ? 'ローカルモードを無効にして' : ''}自動同期を有効にすることで、データが安全に保存されます</li>
                   </>
                 )}
-                {isAdminMode && <li className="font-jp-bold text-green-700">管理者モードでは、すべてのユーザーのデータを管理できます</li>}
+                {isAdminMode && (
+                  <li className="font-jp-bold text-green-700">
+                    管理者モードでは、すべてのユーザーのデータを管理できます
+                    {isLocalMode && ' (ローカルモードでは制限があります)'}
+                  </li>
+                )}
               </ul>
             </div>
           </div>
@@ -437,11 +503,15 @@ const DataMigration: React.FC = () => {
         {/* 最終同期時間表示 */}
         {!isAdminMode && (
           <div className="mt-4 text-center text-sm text-gray-500">
-            <p>
-              {localStorage.getItem('last_sync_time') 
-                ? `最終同期: ${new Date(localStorage.getItem('last_sync_time') || '').toLocaleString('ja-JP')}` 
-                : '同期履歴はまだありません'}
-            </p>
+            {isLocalMode ? (
+              <p>ローカルモードで動作中のため同期は行われません</p>
+            ) : (
+              <p>
+                {localStorage.getItem('last_sync_time') 
+                  ? `最終同期: ${new Date(localStorage.getItem('last_sync_time') || '').toLocaleString('ja-JP')}` 
+                  : '同期履歴はまだありません'}
+              </p>
+            )}
           </div>
         )}
       </div>
