@@ -1,58 +1,51 @@
 import { supabase } from './supabase';
 
 /**
- * Boltが生成したテストデータを削除する関数
- * 実際のユーザーデータは保持する
+ * Boltが作成したテストデータを削除する関数
+ * 実際のユーザーデータは保持される
  */
 export const cleanupTestData = async (): Promise<{
   localRemoved: number;
   supabaseRemoved: number;
   success: boolean;
 }> => {
-  let localRemoved = 0;
-  let supabaseRemoved = 0;
-  
   try {
     // ローカルストレージからのテストデータ削除
+    let localRemoved = 0;
+    
+    // 日記データの削除
     const savedEntries = localStorage.getItem('journalEntries');
     if (savedEntries) {
       const entries = JSON.parse(savedEntries);
-      
-      // テストデータの特徴を持つエントリーを識別
-      // (例: Boltが生成した特定のパターンを持つデータ)
+      // テストデータの特徴（Boltが生成したデータの特徴）
       const realEntries = entries.filter((entry: any) => {
-        // テストデータの特徴:
-        // 1. 特定の期間内に大量に生成されたデータ
-        // 2. 同じようなパターンの内容
-        // 3. 実際のユーザーデータとは異なる特徴
+        // テストデータの特徴（例: 特定のパターンを持つ内容）
+        const isBoltGenerated = 
+          (entry.event && entry.event.includes('テストデータ')) || 
+          (entry.realization && entry.realization.includes('テストデータ')) ||
+          (entry.event && entry.event.includes('This is a test entry')) ||
+          (entry.event && entry.event.includes('サンプルデータ'));
         
-        // 以下は簡易的な判定ロジック
-        const isTestData = 
-          (entry.event && entry.event.includes('テスト')) ||
-          (entry.event && entry.event.includes('サンプル')) ||
-          (entry.event && entry.event.includes('example')) ||
-          (entry.event && entry.event.includes('test')) ||
-          (entry.realization && entry.realization.includes('テスト')) ||
-          (entry.realization && entry.realization.includes('サンプル'));
-        
-        return !isTestData;
+        if (isBoltGenerated) {
+          localRemoved++;
+          return false;
+        }
+        return true;
       });
       
-      // 削除されたエントリー数を計算
-      localRemoved = entries.length - realEntries.length;
-      
-      // 実際のユーザーデータのみを保存
       localStorage.setItem('journalEntries', JSON.stringify(realEntries));
     }
     
-    // Supabaseからのテストデータ削除（接続されている場合のみ）
+    // Supabaseからのテストデータ削除
+    let supabaseRemoved = 0;
+    
     if (supabase) {
       try {
-        // テストデータの条件に一致するエントリーを削除
+        // テストデータの特徴に基づいて削除
         const { data, error } = await supabase
           .from('diary_entries')
           .delete()
-          .or('event.ilike.%テスト%,event.ilike.%サンプル%,event.ilike.%example%,event.ilike.%test%,realization.ilike.%テスト%,realization.ilike.%サンプル%')
+          .or('event.ilike.%テストデータ%,event.ilike.%This is a test entry%,event.ilike.%サンプルデータ%')
           .select();
         
         if (error) {
@@ -71,10 +64,10 @@ export const cleanupTestData = async (): Promise<{
       success: true
     };
   } catch (error) {
-    console.error('テストデータクリーンアップエラー:', error);
+    console.error('テストデータ削除エラー:', error);
     return {
-      localRemoved,
-      supabaseRemoved,
+      localRemoved: 0,
+      supabaseRemoved: 0,
       success: false
     };
   }
