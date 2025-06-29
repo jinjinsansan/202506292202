@@ -41,17 +41,17 @@ export const useAutoSync = (): AutoSyncState => {
   useEffect(() => {
     if (!isAutoSyncEnabled || !supabase) return;
     if (isLocalMode) {
-      console.log('ローカルモードで動作中: 自動同期は無効です');
+      console.log('useAutoSync: ローカルモードで動作中: 自動同期は無効です');
       return;
     }
     
-    // 1分ごとに自動同期を実行
+    // 30秒ごとに自動同期を実行
     const interval = setInterval(() => {
       if (!isSyncing) {
-        console.log('自動同期を実行します...');
+        console.log('useAutoSync: 自動同期を実行します...');
         syncData();
       }
-    }, 1 * 60 * 1000); // 1分 = 60,000ミリ秒（テスト用に短縮）
+    }, 30 * 1000); // 30秒 = 30,000ミリ秒（より頻繁に同期）
     
     return () => clearInterval(interval);
   }, [isAutoSyncEnabled, isSyncing]);
@@ -120,10 +120,14 @@ export const useAutoSync = (): AutoSyncState => {
       // 現在のユーザーを取得
       let userId: string;
       const user = getCurrentUser();
-      if (!user || !user.lineUsername) {
-        console.log('ユーザーがログインしていないか、ユーザー名が取得できません');
+      
+      // ユーザー名を取得（getCurrentUserから取得できない場合はローカルストレージから直接取得）
+      const lineUsername = user?.lineUsername || localStorage.getItem('line-username');
+      
+      if (!lineUsername) {
+        console.log('useAutoSync: ユーザー名が取得できません');
         if (isLocalMode) {
-          console.log('ローカルモードのため、ローカルユーザーIDを使用');
+          console.log('useAutoSync: ローカルモードのため、ローカルユーザーIDを使用');
           userId = 'local-user-id';
         } else {
           return false;
@@ -131,16 +135,17 @@ export const useAutoSync = (): AutoSyncState => {
       } else {
         // ユーザーIDを取得
         userId = currentUser?.id || 'local-user-id';
-        console.log('現在のユーザーID:', userId);
+        console.log('useAutoSync: 現在のユーザーID:', userId, 'ユーザー名:', lineUsername);
         
         // ユーザーIDがない場合は初期化
         if (!userId || userId === 'local-user-id') {
           if (isLocalMode) {
             userId = 'local-user-id';
           } else {
-            const supabaseUser = await userService.createOrGetUser(user.lineUsername);
+            console.log('useAutoSync: ユーザーを作成または取得します:', lineUsername);
+            const supabaseUser = await userService.createOrGetUser(lineUsername);
             if (!supabaseUser || !supabaseUser.id) {
-              console.error('ユーザーの作成に失敗しました');
+              console.error('useAutoSync: ユーザーの作成に失敗しました');
               return false;
             }
             
@@ -153,7 +158,7 @@ export const useAutoSync = (): AutoSyncState => {
       // ローカルストレージから日記データを取得
       const savedEntries = localStorage.getItem('journalEntries');
       if (!savedEntries) {
-        console.log('同期するデータがありません: 同期をスキップします');
+        console.log('useAutoSync: 同期するデータがありません: 同期をスキップします');
         setLastSyncTime(new Date().toISOString());
         localStorage.setItem('last_sync_time', new Date().toISOString());
         return true;
@@ -164,15 +169,41 @@ export const useAutoSync = (): AutoSyncState => {
       // 日記データを整形（ローカルストレージのデータ形式をSupabase形式に変換）
       entries = entries.map((entry: any) => {
         // 必要なフィールドを確保
-        console.log('エントリー変換前:', entry);
+        // console.log('useAutoSync: エントリー変換前:', entry);
+        
+        // 自己肯定感スコアと無価値感スコアの処理
+        let selfEsteemScore = entry.self_esteem_score;
+        let worthlessnessScore = entry.worthlessness_score;
+        
+        // フィールド名の違いに対応
+        if (selfEsteemScore === undefined && entry.selfEsteemScore !== undefined) {
+          selfEsteemScore = entry.selfEsteemScore;
+        }
+        
+        if (worthlessnessScore === undefined && entry.worthlessnessScore !== undefined) {
+          worthlessnessScore = entry.worthlessnessScore;
+        }
+        
+        // デフォルト値の設定
+        if (selfEsteemScore === undefined || selfEsteemScore === null) {
+          selfEsteemScore = 50;
+        }
+        
+        if (worthlessnessScore === undefined || worthlessnessScore === null) {
+          worthlessnessScore = 50;
+        }
+        
         return {
           id: entry.id,
           date: entry.date,
           emotion: entry.emotion,
           event: entry.event,
           realization: entry.realization,
-          self_esteem_score: entry.self_esteem_score || entry.selfEsteemScore || 50,
-          worthlessness_score: entry.worthlessness_score || entry.worthlessnessScore || 50,
+          self_esteem_score: Number(selfEsteemScore),
+          worthlessness_score: Number(worthlessnessScore),
+          // 互換性のために両方のフィールド名で保存
+          selfEsteemScore: Number(selfEsteemScore),
+          worthlessnessScore: Number(worthlessnessScore),
           created_at: entry.created_at || new Date().toISOString(),
           counselor_memo: entry.counselor_memo || null,
           is_visible_to_user: entry.is_visible_to_user || false,
@@ -183,10 +214,10 @@ export const useAutoSync = (): AutoSyncState => {
       });
       
       // 日記データを同期
-      console.log('同期を開始します:', entries.length, '件のデータ');
-      console.log('同期データサンプル:', entries.slice(0, 1));
+      console.log('useAutoSync: 同期を開始します:', entries.length, '件のデータ');
+      // console.log('useAutoSync: 同期データサンプル:', entries.slice(0, 1));
       const { success, error } = await diaryService.syncDiaries(userId, entries);
-      console.log('同期結果:', success ? '成功' : '失敗', error ? `エラー: ${error}` : '');
+      console.log('useAutoSync: 同期結果:', success ? '成功' : '失敗', error ? `エラー: ${error}` : '');
       
       if (!success) {
         throw new Error(error || '日記の同期に失敗しました');
@@ -196,11 +227,11 @@ export const useAutoSync = (): AutoSyncState => {
       const now = new Date().toISOString();
       setLastSyncTime(now);
       localStorage.setItem('last_sync_time', now);
-
-      console.log('データ同期完了:', entries.length, '件のデータを同期しました');
+      
+      console.log('useAutoSync: データ同期完了:', entries.length, '件のデータを同期しました');
       return true;
     } catch (error) {
-      console.error('データ同期エラー:', error);
+      console.error('useAutoSync: データ同期エラー:', error);
       setError(error instanceof Error ? error.message : '不明なエラー');
       return false;
     } finally {
@@ -216,12 +247,12 @@ export const useAutoSync = (): AutoSyncState => {
   // 手動同期イベントのリスナー
   useEffect(() => {
     const handleManualSyncRequest = () => {
-      console.log('手動同期リクエストを受信しました', '同期中:', isSyncing, 'ローカルモード:', isLocalMode);
+      console.log('useAutoSync: 手動同期リクエストを受信しました', '同期中:', isSyncing, 'ローカルモード:', isLocalMode);
       if (!isSyncing && !isLocalMode) {
         triggerManualSync().then(success => {
-          console.log('手動同期結果:', success ? '成功' : '失敗');
+          console.log('useAutoSync: 手動同期結果:', success ? '成功' : '失敗');
         }).catch(error => {
-          console.error('手動同期エラー:', error);
+          console.error('useAutoSync: 手動同期エラー:', error);
         });
       }
     };
@@ -230,14 +261,14 @@ export const useAutoSync = (): AutoSyncState => {
     
     // 初回マウント時に手動同期を実行
     if (!isLocalMode && !isSyncing) {
-      console.log('初期同期を実行します...');
+      console.log('useAutoSync: 初期同期を実行します...');
       setTimeout(async () => {
-        console.log('初期同期を開始します');
+        console.log('useAutoSync: 初期同期を開始します');
         try {
           const success = await triggerManualSync();
-          console.log('初期同期結果:', success ? '成功' : '失敗');
+          console.log('useAutoSync: 初期同期結果:', success ? '成功' : '失敗');
         } catch (error) {
-          console.error('初期同期エラー:', error);
+          console.error('useAutoSync: 初期同期エラー:', error);
         }
       }, 3000);
     }
@@ -245,9 +276,9 @@ export const useAutoSync = (): AutoSyncState => {
     // 30秒後に再度同期を試行（初期同期の補完として）
     if (!isLocalMode) {
       setTimeout(async () => {
-        console.log('補完同期を開始します');
+        console.log('useAutoSync: 補完同期を開始します');
         triggerManualSync().catch(error => {
-          console.error('補完同期エラー:', error);
+          console.error('useAutoSync: 補完同期エラー:', error);
         });
       }, 30000);
     }

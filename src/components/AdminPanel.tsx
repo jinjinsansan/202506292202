@@ -59,6 +59,7 @@ const AdminPanel: React.FC = () => {
   const loadEntries = async () => {
     setLoading(true);
     try {
+      console.log('AdminPanel: データ読み込みを開始します');
       try {
         // ローカルストレージからデータを取得
         const savedEntries = localStorage.getItem('journalEntries');
@@ -67,13 +68,24 @@ const AdminPanel: React.FC = () => {
         if (savedEntries) {
           localEntries = JSON.parse(savedEntries);
           
-          // ローカルエントリーにユーザー名を追加
+          // ローカルエントリーにユーザー名を追加（ユーザー情報がない場合）
           const lineUsername = localStorage.getItem('line-username') || 'Unknown User';
-          localEntries = localEntries.map((entry: any) => ({
-            ...entry,
-            user: { line_username: lineUsername },
-            source: 'local'
-          }));
+          localEntries = localEntries.map((entry: any) => {
+            // ユーザー情報がない場合のみ追加
+            if (!entry.user) {
+              return {
+                ...entry,
+                user: { line_username: lineUsername },
+                source: 'local'
+              };
+            }
+            return {
+              ...entry,
+              source: 'local'
+            };
+          });
+          
+          console.log('AdminPanel: ローカルデータ読み込み完了:', localEntries.length, '件');
         }
         
         // Supabaseからデータを取得（接続されている場合）
@@ -93,6 +105,11 @@ const AdminPanel: React.FC = () => {
             } else if (data) {
               supabaseEntries = data;
               console.log('Supabaseから取得したエントリー:', data.length);
+              
+              // Supabaseから取得したデータのサンプルをログに出力
+              if (data.length > 0) {
+                console.log('Supabaseデータサンプル:', data[0]);
+              }
             }
           } catch (supabaseError) {
             console.error('Supabase接続エラー:', supabaseError);
@@ -105,28 +122,15 @@ const AdminPanel: React.FC = () => {
         // ローカルデータを追加
         localEntries.forEach((entry: any) => {
           entriesMap.set(entry.id, {
-            ...entry,
-            source: 'local'
+            ...entry
           });
         });
         
         // Supabaseデータを追加（同じIDの場合は上書き）
         supabaseEntries.forEach((entry: any) => {
           const formattedEntry = {
-            id: entry.id,
-            date: entry.date,
-            emotion: entry.emotion,
-            event: entry.event,
-            realization: entry.realization,
-            self_esteem_score: entry.self_esteem_score,
-            worthlessness_score: entry.worthlessness_score,
-            created_at: entry.created_at,
-            user: entry.users,
-            assigned_counselor: entry.assigned_counselor,
-            urgency_level: entry.urgency_level,
-            counselor_memo: entry.counselor_memo,
-            is_visible_to_user: entry.is_visible_to_user,
-            counselor_name: entry.counselor_name,
+            ...entry,
+            user: entry.users || entry.user,
             source: 'supabase'
           };
           entriesMap.set(entry.id, formattedEntry);
@@ -135,6 +139,15 @@ const AdminPanel: React.FC = () => {
         // Mapから配列に変換
         const combinedEntries = Array.from(entriesMap.values());
         
+        // 各エントリーにユーザー情報が含まれているか確認
+        combinedEntries.forEach((entry: any, index) => {
+          if (!entry.user) {
+            console.log(`AdminPanel: エントリー ${index} にユーザー情報がありません:`, entry);
+            // ユーザー情報がない場合は、ローカルユーザー名を使用
+            entry.user = { line_username: localStorage.getItem('line-username') || 'Unknown User' };
+          }
+        });
+        
         // 日付順でソート（新しい順）
         combinedEntries.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
@@ -142,6 +155,13 @@ const AdminPanel: React.FC = () => {
         setFilteredEntries(combinedEntries);
         
         console.log('データ読み込み完了:', combinedEntries.length, '件');
+        
+        // 同期状態を確認するためのイベントを発火
+        setTimeout(() => {
+          console.log('AdminPanel: 管理画面表示後の同期リクエストを送信します');
+          const event = new CustomEvent('manual-sync-request');
+          window.dispatchEvent(event);
+        }, 5000);
       } catch (error) {
         console.error('データ処理エラー:', error);
         throw error;

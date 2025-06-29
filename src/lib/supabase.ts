@@ -83,7 +83,7 @@ export const userService = {
 // 日記サービス
 export const diaryService = {
   // 日記の同期
-  async syncDiaries(userId: string, diaries: any[]) {
+  async syncDiaries(userId: string, diaries: any[]): Promise<{ success: boolean; error?: string; data?: any }> {
     if (!supabase) return { success: false, error: 'Supabase接続なし' };
     if (isLocalMode) {
       console.log('ローカルモードで動作中: 同期をスキップします', diaries.length, '件のデータ');
@@ -93,7 +93,7 @@ export const diaryService = {
     try {
       // 日記データの整形
       const formattedDiaries = diaries.map(diary => {
-        console.log('Supabase同期 - 日記データ変換:', diary);
+        // console.log('Supabase同期 - 日記データ変換:', diary);
         
         // 自己肯定感スコアと無価値感スコアの処理
         let selfEsteemScore = diary.self_esteem_score;
@@ -118,7 +118,7 @@ export const diaryService = {
         }
         
         return {
-          id: diary.id,
+          id: diary.id || Date.now().toString(),
           user_id: userId,
           date: diary.date,
           emotion: diary.emotion,
@@ -132,29 +132,73 @@ export const diaryService = {
           counselor_name: diary.counselor_name || null,
           assigned_counselor: diary.assigned_counselor || null,
           urgency_level: diary.urgency_level || null
+          // 注意: Supabaseに送信するデータには、selfEsteemScoreとworthlessnessScoreは含めない
+          // これらはローカルストレージ用のフィールド名
         };
       });
       
-      console.log('Supabaseに同期するデータ:', formattedDiaries.length, '件');
+      console.log('diaryService: Supabaseに同期するデータ:', formattedDiaries.length, '件');
       
       // 一括挿入（競合時は更新）
-      const { data, error } = await supabase
-        .from('diary_entries')
-        .upsert(formattedDiaries, {
-          onConflict: 'id',
-          ignoreDuplicates: false
-        });
-      
-      if (error) {
-        console.error('日記同期エラー:', error, formattedDiaries);
-        return { success: false, error: `同期エラー: ${error.message}` };
+      try {
+        const { data, error } = await supabase
+          .from('diary_entries')
+          .upsert(formattedDiaries, {
+            onConflict: 'id',
+            ignoreDuplicates: false
+          });
+        
+        if (error) {
+          console.error('diaryService: 日記同期エラー:', error);
+          
+          // エラーの詳細をログに出力
+          if (error.details) {
+            console.error('diaryService: エラー詳細:', error.details);
+          }
+          
+          // 一部のデータが問題を引き起こしている可能性があるため、1件ずつ同期を試みる
+          console.log('diaryService: 1件ずつの同期を試みます...');
+          let successCount = 0;
+          
+          for (const diary of formattedDiaries) {
+            try {
+              const { error: singleError } = await supabase
+                .from('diary_entries')
+                .upsert([diary], {
+                  onConflict: 'id',
+                  ignoreDuplicates: false
+                });
+              
+              if (!singleError) {
+                successCount++;
+              } else {
+                console.error(`diaryService: ID ${diary.id} の同期に失敗:`, singleError);
+              }
+            } catch (singleSyncError) {
+              console.error(`diaryService: ID ${diary.id} の同期中にエラー:`, singleSyncError);
+            }
+          }
+          
+          if (successCount > 0) {
+            console.log(`diaryService: ${successCount}/${formattedDiaries.length} 件のデータを同期しました`);
+            return { 
+              success: true, 
+              data: { message: `${successCount}/${formattedDiaries.length} 件のデータを同期しました` } 
+            };
+          }
+          
+          return { success: false, error: `同期エラー: ${error.message}` };
+        }
+        
+        console.log('diaryService: Supabase同期成功:', formattedDiaries.length, '件のデータを同期しました');
+        return { success: true, data };
+      } catch (syncError) {
+        console.error('diaryService: Supabase同期中にエラーが発生:', syncError);
+        return { success: false, error: `同期中にエラーが発生: ${String(syncError)}` };
       }
-      
-      console.log('Supabase同期成功:', formattedDiaries.length, '件のデータを同期しました');
-      return { success: true, data };
     } catch (error) {
-      console.error('日記同期サービスエラー:', error);
-      return { success: false, error: `同期サービスエラー: ${String(error)}` };
+      console.error('diaryService: 日記同期サービスエラー:', error);
+      return { success: false, error: `同期サービスエラー: ${String(error)}`, data: null };
     }
   },
   
