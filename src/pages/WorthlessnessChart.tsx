@@ -61,8 +61,14 @@ const WorthlessnessChart: React.FC = () => {
         
         console.log('全エントリー数:', entries?.length || 0);
         
-        // 無価値感の日記のみをフィルタリング
-        const worthlessnessEntries = entries?.filter((entry: any) => entry.emotion === '無価値感') || [];
+        // 無価値感とポジティブ感情の日記をフィルタリング
+        const worthlessnessEntries = entries?.filter((entry: any) => 
+          entry.emotion === '無価値感' || 
+          entry.emotion === '嬉しい' || 
+          entry.emotion === '感謝' || 
+          entry.emotion === '達成感' || 
+          entry.emotion === '幸せ'
+        ) || [];
         
         // 日記データをフォーマット
         let formattedData = worthlessnessEntries.map((entry: any) => ({
@@ -579,6 +585,18 @@ const WorthlessnessChart: React.FC = () => {
                 </div>
               </div>
             )}
+            
+            {/* ポジティブ感情の説明 */}
+            <div className="bg-green-50 rounded-lg p-4 border border-green-200 mt-4">
+              <div className="flex items-start space-x-3">
+                <div className="text-green-500 text-xl">💡</div>
+                <div>
+                  <p className="text-green-800 font-jp-medium">
+                    このグラフには無価値感だけでなく、ポジティブな感情（嬉しい、感謝、達成感、幸せ）を選んだ日記のスコアも表示されます。
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
