@@ -55,12 +55,20 @@ export const useAutoSync = (): AutoSyncState => {
   // ユーザー情報の初期化
   const initializeUser = useCallback(async () => {
     if (!supabase) {
-      console.log('Supabase接続なし: ユーザー初期化をスキップ');
+      console.log('Supabase接続なし: ローカルユーザー情報を使用');
+      const user = getCurrentUser();
+      if (user) {
+        setCurrentUser({ id: 'local-user-id', line_username: user.lineUsername });
+      }
       return;
     }
     
     if (isLocalMode) {
-      console.log('ローカルモードで動作中: ユーザー初期化をスキップ');
+      console.log('ローカルモードで動作中: ローカルユーザー情報を使用');
+      const user = getCurrentUser();
+      if (user) {
+        setCurrentUser({ id: 'local-user-id', line_username: user.lineUsername });
+      }
       return;
     }
     
@@ -108,23 +116,32 @@ export const useAutoSync = (): AutoSyncState => {
       // 現在のユーザーを取得
       const user = getCurrentUser();
       if (!user || !user.lineUsername) {
-        console.log('ユーザーがログインしていないか、ユーザー名が取得できません: データ同期をスキップ');
-        return false;
-      }
-      
-      // ユーザーIDを取得
-      let userId = currentUser?.id;
-      
-      // ユーザーIDがない場合は初期化
-      if (!userId) {
-        const supabaseUser = await userService.createOrGetUser(user.lineUsername);
-        if (!supabaseUser || !supabaseUser.id) {
-          console.error('ユーザーの作成に失敗しました');
+        console.log('ユーザーがログインしていないか、ユーザー名が取得できません');
+        if (isLocalMode) {
+          console.log('ローカルモードのため、ローカルユーザーIDを使用');
+          userId = 'local-user-id';
+        } else {
           return false;
         }
+      } else {
+        // ユーザーIDを取得
+        userId = currentUser?.id || 'local-user-id';
         
-        userId = supabaseUser.id;
-        setCurrentUser(supabaseUser);
+        // ユーザーIDがない場合は初期化
+        if (!userId || userId === 'local-user-id') {
+          if (isLocalMode) {
+            userId = 'local-user-id';
+          } else {
+            const supabaseUser = await userService.createOrGetUser(user.lineUsername);
+            if (!supabaseUser || !supabaseUser.id) {
+              console.error('ユーザーの作成に失敗しました');
+              return false;
+            }
+            
+            userId = supabaseUser.id;
+            setCurrentUser(supabaseUser);
+          }
+        }
       }
       
       // ローカルストレージから日記データを取得

@@ -16,6 +16,7 @@ export const userService = {
   // ユーザーの作成または取得
   async createOrGetUser(lineUsername: string) {
     if (!supabase) return null;
+    if (isLocalMode) return { id: 'local-user-id', line_username: lineUsername };
     
     try {
       // 既存ユーザーの検索
@@ -57,6 +58,7 @@ export const userService = {
   // ユーザーIDの取得
   async getUserId(lineUsername: string) {
     if (!supabase) return null;
+    if (isLocalMode) return 'local-user-id';
     
     try {
       const { data, error } = await supabase

@@ -717,7 +717,7 @@ const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
                       {entry.emotion}
                     </span>
                     <span className="text-gray-900 font-jp-medium">
-                      {entry.user?.line_username || 'Unknown User'}
+                      {entry.user?.line_username || localStorage.getItem('line-username') || 'Unknown User'}
                     </span>
                     <span className="text-gray-500 text-sm font-jp-normal">
                       {formatDate(entry.date)}
