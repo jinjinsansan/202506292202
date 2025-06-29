@@ -59,80 +59,93 @@ const AdminPanel: React.FC = () => {
   const loadEntries = async () => {
     setLoading(true);
     try {
-      // ローカルストレージからデータを取得
-      const savedEntries = localStorage.getItem('journalEntries');
-      let localEntries = [];
-      
-      if (savedEntries) {
-        localEntries = JSON.parse(savedEntries);
-      }
-      
-      // Supabaseからデータを取得（接続されている場合）
-      let supabaseEntries = [];
-      if (supabase) {
-        try {
-          const { data, error } = await supabase
-            .from('diary_entries')
-            .select(`
-              *,
-              users(line_username)
-            `)
-            .order('created_at', { ascending: false });
+      try {
+        // ローカルストレージからデータを取得
+        const savedEntries = localStorage.getItem('journalEntries');
+        let localEntries = [];
+        
+        if (savedEntries) {
+          localEntries = JSON.parse(savedEntries);
           
-          if (error) {
-            console.error('Supabaseデータ取得エラー:', error);
-          } else if (data) {
-            supabaseEntries = data;
-            console.log('Supabaseから取得したエントリー:', data.length);
-          }
-        } catch (supabaseError) {
-          console.error('Supabase接続エラー:', supabaseError);
+          // ローカルエントリーにユーザー名を追加
+          const lineUsername = localStorage.getItem('line-username') || 'Unknown User';
+          localEntries = localEntries.map((entry: any) => ({
+            ...entry,
+            user: { line_username: lineUsername },
+            source: 'local'
+          }));
         }
-      }
-      
-      // データを結合（重複を避けるため、IDをキーとして使用）
-      const entriesMap = new Map();
-      
-      // ローカルデータを追加
-      localEntries.forEach((entry: any) => {
-        entriesMap.set(entry.id, {
-          ...entry,
-          source: 'local'
+        
+        // Supabaseからデータを取得（接続されている場合）
+        let supabaseEntries = [];
+        if (supabase) {
+          try {
+            const { data, error } = await supabase
+              .from('diary_entries')
+              .select(`
+                *,
+                users(line_username)
+              `)
+              .order('created_at', { ascending: false });
+            
+            if (error) {
+              console.error('Supabaseデータ取得エラー:', error);
+            } else if (data) {
+              supabaseEntries = data;
+              console.log('Supabaseから取得したエントリー:', data.length);
+            }
+          } catch (supabaseError) {
+            console.error('Supabase接続エラー:', supabaseError);
+          }
+        }
+        
+        // データを結合（重複を避けるため、IDをキーとして使用）
+        const entriesMap = new Map();
+        
+        // ローカルデータを追加
+        localEntries.forEach((entry: any) => {
+          entriesMap.set(entry.id, {
+            ...entry,
+            source: 'local'
+          });
         });
-      });
-      
-      // Supabaseデータを追加（同じIDの場合は上書き）
-      supabaseEntries.forEach((entry: any) => {
-        const formattedEntry = {
-          id: entry.id,
-          date: entry.date,
-          emotion: entry.emotion,
-          event: entry.event,
-          realization: entry.realization,
-          self_esteem_score: entry.self_esteem_score,
-          worthlessness_score: entry.worthlessness_score,
-          created_at: entry.created_at,
-          user: entry.users,
-          assigned_counselor: entry.assigned_counselor,
-          urgency_level: entry.urgency_level,
-          counselor_memo: entry.counselor_memo,
-          is_visible_to_user: entry.is_visible_to_user,
-          counselor_name: entry.counselor_name,
-          source: 'supabase'
-        };
-        entriesMap.set(entry.id, formattedEntry);
-      });
-      
-      // Mapから配列に変換
-      const combinedEntries = Array.from(entriesMap.values());
-      
-      // 日付順でソート（新しい順）
-      combinedEntries.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
-      setEntries(combinedEntries);
-      setFilteredEntries(combinedEntries);
-      
-      console.log('データ読み込み完了:', combinedEntries.length, '件');
+        
+        // Supabaseデータを追加（同じIDの場合は上書き）
+        supabaseEntries.forEach((entry: any) => {
+          const formattedEntry = {
+            id: entry.id,
+            date: entry.date,
+            emotion: entry.emotion,
+            event: entry.event,
+            realization: entry.realization,
+            self_esteem_score: entry.self_esteem_score,
+            worthlessness_score: entry.worthlessness_score,
+            created_at: entry.created_at,
+            user: entry.users,
+            assigned_counselor: entry.assigned_counselor,
+            urgency_level: entry.urgency_level,
+            counselor_memo: entry.counselor_memo,
+            is_visible_to_user: entry.is_visible_to_user,
+            counselor_name: entry.counselor_name,
+            source: 'supabase'
+          };
+          entriesMap.set(entry.id, formattedEntry);
+        });
+        
+        // Mapから配列に変換
+        const combinedEntries = Array.from(entriesMap.values());
+        
+        // 日付順でソート（新しい順）
+        combinedEntries.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        setEntries(combinedEntries);
+        setFilteredEntries(combinedEntries);
+        
+        console.log('データ読み込み完了:', combinedEntries.length, '件');
+      } catch (error) {
+        console.error('データ処理エラー:', error);
+        throw error;
+      }
     } catch (error) {
       console.error('データ読み込みエラー:', error);
     } finally {
@@ -569,7 +582,7 @@ const AdminPanel: React.FC = () => {
                                 {entry.emotion}
                               </span>
                               <span className="text-gray-900 font-jp-medium">
-                                {entry.user?.line_username || 'Unknown User'}
+                                {entry.user?.line_username || localStorage.getItem('line-username') || 'Unknown User'}
                               </span>
                               <span className="text-gray-500 text-sm">
                                 {formatDate(entry.date)}
@@ -646,7 +659,7 @@ const AdminPanel: React.FC = () => {
                           <div className="flex justify-between items-center text-sm">
                             <div className="flex items-center space-x-2 text-gray-500">
                               <Clock className="w-4 h-4" />
-                              <span>{new Date(entry.created_at).toLocaleString('ja-JP')}</span>
+                              <span>{entry.created_at ? new Date(entry.created_at).toLocaleString('ja-JP') : '日時不明'}</span>
                             </div>
                             <div className="flex items-center space-x-2">
                               {entry.assigned_counselor && (
