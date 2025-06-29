@@ -393,6 +393,19 @@ const DiaryPage: React.FC = () => {
       console.log('保存する日記データ:', newEntry);
       entries.unshift(newEntry);
       localStorage.setItem('journalEntries', JSON.stringify(entries));
+
+      // 自動同期を手動で実行（即時同期）
+      try {
+        const autoSyncEnabled = localStorage.getItem('auto_sync_enabled') !== 'false';
+        if (autoSyncEnabled && !isLocalMode) {
+          // 自動同期イベントを発火
+          const syncEvent = new CustomEvent('manual-sync-request');
+          window.dispatchEvent(syncEvent);
+          console.log('同期リクエストを送信しました');
+        }
+      } catch (error) {
+        console.error('同期リクエスト送信エラー:', error);
+      }
       
       alert('日記を保存しました！');
     

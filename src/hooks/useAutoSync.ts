@@ -95,12 +95,12 @@ export const useAutoSync = (): AutoSyncState => {
   // データ同期処理
   const syncData = useCallback(async (): Promise<boolean> => {
     if (!supabase) {
-      console.log('Supabase接続なし: データ同期をスキップ');
+      console.log('Supabase接続なし: データ同期をスキップします');
       return false;
     }
     
     if (isLocalMode) {
-      console.log('ローカルモードで動作中: データ同期をスキップ');
+      console.log('ローカルモードで動作中: データ同期をスキップします');
       return false;
     }
     
@@ -114,6 +114,7 @@ export const useAutoSync = (): AutoSyncState => {
     
     try {
       // 現在のユーザーを取得
+      let userId: string;
       const user = getCurrentUser();
       if (!user || !user.lineUsername) {
         console.log('ユーザーがログインしていないか、ユーザー名が取得できません');
@@ -126,6 +127,7 @@ export const useAutoSync = (): AutoSyncState => {
       } else {
         // ユーザーIDを取得
         userId = currentUser?.id || 'local-user-id';
+        console.log('現在のユーザーID:', userId);
         
         // ユーザーIDがない場合は初期化
         if (!userId || userId === 'local-user-id') {
@@ -147,15 +149,36 @@ export const useAutoSync = (): AutoSyncState => {
       // ローカルストレージから日記データを取得
       const savedEntries = localStorage.getItem('journalEntries');
       if (!savedEntries) {
-        console.log('同期するデータがありません: 同期をスキップ');
+        console.log('同期するデータがありません: 同期をスキップします');
         setLastSyncTime(new Date().toISOString());
         localStorage.setItem('last_sync_time', new Date().toISOString());
         return true;
       }
       
-      const entries = JSON.parse(savedEntries);
+      let entries = JSON.parse(savedEntries);
+      
+      // 日記データを整形（ローカルストレージのデータ形式をSupabase形式に変換）
+      entries = entries.map((entry: any) => {
+        // 必要なフィールドを確保
+        return {
+          id: entry.id,
+          date: entry.date,
+          emotion: entry.emotion,
+          event: entry.event,
+          realization: entry.realization,
+          self_esteem_score: entry.selfEsteemScore || 50,
+          worthlessness_score: entry.worthlessnessScore || 50,
+          created_at: entry.created_at || new Date().toISOString(),
+          counselor_memo: entry.counselor_memo || null,
+          is_visible_to_user: entry.is_visible_to_user || false,
+          counselor_name: entry.counselor_name || null,
+          assigned_counselor: entry.assigned_counselor || null,
+          urgency_level: entry.urgency_level || null
+        };
+      });
       
       // 日記データを同期
+      console.log('同期を開始します:', entries.length, '件のデータ');
       const { success, error } = await diaryService.syncDiaries(userId, entries);
       
       if (!success) {
@@ -166,8 +189,8 @@ export const useAutoSync = (): AutoSyncState => {
       const now = new Date().toISOString();
       setLastSyncTime(now);
       localStorage.setItem('last_sync_time', now);
-      
-      console.log('データ同期完了:', entries.length, '件');
+
+      console.log('データ同期完了:', entries.length, '件のデータを同期しました');
       return true;
     } catch (error) {
       console.error('データ同期エラー:', error);
@@ -182,6 +205,26 @@ export const useAutoSync = (): AutoSyncState => {
   const triggerManualSync = useCallback(async (): Promise<boolean> => {
     return await syncData();
   }, [syncData]);
+  
+  // 手動同期イベントのリスナー
+  useEffect(() => {
+    const handleManualSyncRequest = () => {
+      console.log('手動同期リクエストを受信しました');
+      if (!isSyncing && !isLocalMode) {
+        triggerManualSync().then(success => {
+          console.log('手動同期結果:', success ? '成功' : '失敗');
+        }).catch(error => {
+          console.error('手動同期エラー:', error);
+        });
+      }
+    };
+    
+    window.addEventListener('manual-sync-request', handleManualSyncRequest);
+    
+    return () => {
+      window.removeEventListener('manual-sync-request', handleManualSyncRequest);
+    };
+  }, [triggerManualSync, isSyncing]);
   
   return {
     isAutoSyncEnabled,

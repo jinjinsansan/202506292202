@@ -85,14 +85,31 @@ export const diaryService = {
   // 日記の同期
   async syncDiaries(userId: string, diaries: any[]) {
     if (!supabase) return { success: false, error: 'Supabase接続なし' };
-    if (isLocalMode) return { success: false, error: 'ローカルモードで動作中' };
+    if (isLocalMode) {
+      console.log('ローカルモードで動作中: 同期をスキップします');
+      return { success: false, error: 'ローカルモードで動作中' };
+    }
     
     try {
       // 日記データの整形
       const formattedDiaries = diaries.map(diary => ({
-        ...diary,
-        user_id: userId
+        id: diary.id,
+        user_id: userId,
+        date: diary.date,
+        emotion: diary.emotion,
+        event: diary.event,
+        realization: diary.realization,
+        self_esteem_score: diary.self_esteem_score || diary.selfEsteemScore || 50,
+        worthlessness_score: diary.worthlessness_score || diary.worthlessnessScore || 50,
+        created_at: diary.created_at || new Date().toISOString(),
+        counselor_memo: diary.counselor_memo || null,
+        is_visible_to_user: diary.is_visible_to_user || false,
+        counselor_name: diary.counselor_name || null,
+        assigned_counselor: diary.assigned_counselor || null,
+        urgency_level: diary.urgency_level || null
       }));
+      
+      console.log('Supabaseに同期するデータ:', formattedDiaries.length, '件');
       
       // 一括挿入（競合時は更新）
       const { data, error } = await supabase
@@ -107,6 +124,7 @@ export const diaryService = {
         return { success: false, error: error.message };
       }
       
+      console.log('Supabase同期成功:', formattedDiaries.length, '件のデータを同期しました');
       return { success: true, data };
     } catch (error) {
       console.error('日記同期サービスエラー:', error);

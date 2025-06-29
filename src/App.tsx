@@ -73,7 +73,13 @@ function App() {
   // 自動同期の状態を確認
   useEffect(() => {
     if (isConnected && autoSync.currentUser && autoSync.isAutoSyncEnabled && !isLocalMode) {
-      console.log('自動同期が有効です。5分ごとにデータが同期されます。');
+      console.log('自動同期が有効になりました。5分ごとにデータが同期されます。');
+      // 初回の手動同期を実行
+      setTimeout(() => {
+        autoSync.triggerManualSync().catch(error => {
+          console.error('初期同期エラー:', error);
+        });
+      }, 2000);
     }
   }, [isConnected, autoSync.currentUser, autoSync.isAutoSyncEnabled]);
 
