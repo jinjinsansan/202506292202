@@ -43,7 +43,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   // カスタムフックの初期化
-  const { isMaintenanceMode, config, isAdminBypass } = useMaintenanceStatus();
+  const { isMaintenanceMode, isAdminBypass, config } = useMaintenanceStatus();
   const { isConnected, error: supabaseError, retryConnection } = useSupabase();
   
   // 自動同期フックを初期化
