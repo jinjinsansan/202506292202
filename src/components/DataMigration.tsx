@@ -247,7 +247,7 @@ const DataMigration: React.FC = () => {
             <div className="flex items-center justify-between bg-white rounded-lg p-4 border border-gray-200">
               <div className="flex items-center space-x-3">
                 <div className={`w-3 h-3 rounded-full ${autoSyncEnabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-                <span className="font-jp-medium text-gray-900">自動同期</span>
+                <span className="font-jp-medium text-gray-900">自動同期 {isLocalMode ? '(ローカルモード中は無効)' : ''}</span>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input 
@@ -264,8 +264,8 @@ const DataMigration: React.FC = () => {
             {isLocalMode && (
               <div className="mt-2 bg-yellow-50 rounded-lg p-3 border border-yellow-200">
                 <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                  <span className="text-yellow-800 font-jp-medium text-xs">ローカルモードが有効なため、自動同期は無効化されています</span>
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                  <span className="text-yellow-800 font-jp-medium text-sm">ローカルモードが有効なため、自動同期は無効化されています。<br/>.envファイルでVITE_LOCAL_MODE=falseに設定することで有効になります。</span>
                 </div>
               </div>
             )}
@@ -425,7 +425,7 @@ const DataMigration: React.FC = () => {
                     <li>自動同期は5分ごとにバックグラウンドで実行されます</li>
                     <li>ブラウザのキャッシュをクリアしても、データは安全に保存されます</li>
                     <li>端末を変更する場合も、自動的にデータが引き継がれます</li>
-                    <li>自動同期を無効にすると、データが失われる可能性があります</li>
+                    <li>{isLocalMode ? 'ローカルモードを無効にして' : ''}自動同期を有効にすることで、データが安全に保存されます</li>
                   </>
                 )}
                 {isAdminMode && <li className="font-jp-bold text-green-700">管理者モードでは、すべてのユーザーのデータを管理できます</li>}

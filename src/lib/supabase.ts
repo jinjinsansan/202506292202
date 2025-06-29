@@ -3,12 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 // Supabase設定
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://cziqndtoudnnhyuknxld.supabase.co';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6aXFuZHRvdWRubmh5dWtueGxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExOTEzMDMsImV4cCI6MjA2Njc2NzMwM30.2ulHlV6waeE0fKKJGc_oLATZAWAGE3ZuAxGSkw-8uPs';
-const isLocalMode = import.meta.env.VITE_LOCAL_MODE === 'true';
+// ローカルモードの設定（デフォルトはfalse）
+export const isLocalMode = import.meta.env.VITE_LOCAL_MODE === 'true';
 
 // Supabaseクライアントの作成（ローカルモードでない場合のみ）
-export const supabase = !isLocalMode && supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
+export const supabase = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey) 
+  : null; // ローカルモードでも接続は作成するが、実際の同期は行わない
 
 // ユーザーサービス
 export const userService = {

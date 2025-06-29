@@ -45,8 +45,8 @@ function App() {
   const { isMaintenanceMode, config, isAdminBypass } = useMaintenanceStatus();
   const { isConnected, error: supabaseError, retryConnection, currentUser, initializeUser } = useSupabase();
   
-  // ローカルモードの確認
-  const isLocalMode = import.meta.env.VITE_LOCAL_MODE === 'true';
+  // ローカルモードの確認（supabase.tsからインポート）
+  const { isLocalMode } = require('./lib/supabase');
   
   // 自動同期フックを初期化
   const autoSync = useAutoSync();
@@ -625,9 +625,12 @@ function App() {
             {/* ローカルモード表示 */}
             {isLocalMode && (
               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-green-800 font-jp-medium text-sm">ローカルモードで動作中</span>
+                <div className="flex items-start space-x-2">
+                  <div className="w-3 h-3 bg-yellow-500 rounded-full mt-1"></div>
+                  <div>
+                    <span className="text-yellow-800 font-jp-medium text-sm">ローカルモードで動作中</span>
+                    <p className="text-xs text-yellow-700 mt-1">Supabaseへの同期は行われません。本番環境では無効にしてください。</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -683,10 +686,12 @@ function App() {
             {activeTab === 'worthlessness' && <WorthlessnessChart />}
             {activeTab === 'chat' && <Chat />}
             {activeTab === 'data' && <DataMigration />}
-            {activeTab === 'backup' && <UserDataManagement />}
+      <div className="fixed bottom-4 right-4 bg-green-100 border border-green-200 rounded-lg p-3 shadow-lg z-10">
             {activeTab === 'admin' && isAdmin && <AdminPanel />}
-          </div>
-        )}
+          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+          <span className="text-green-800 font-jp-medium text-sm">
+            {isLocalMode ? 'ローカル保存モード' : 'Supabase同期モード'}
+          </span>
       </main>
 
     </div>

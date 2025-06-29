@@ -1165,7 +1165,9 @@ const DiaryPage: React.FC = () => {
       <div className="fixed bottom-4 right-4 bg-green-100 border border-green-200 rounded-lg p-3 shadow-lg">
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-          <span className="text-green-800 font-jp-medium text-sm">ローカル保存モード</span>
+          <span className="text-green-800 font-jp-medium text-sm">
+            {import.meta.env.VITE_LOCAL_MODE === 'true' ? 'ローカル保存モード' : 'Supabase同期モード'}
+          </span>
         </div>
       </div>
     </div>

@@ -868,7 +868,7 @@ const DiarySearchPage: React.FC = () => {
         <div className="flex items-center space-x-2">
           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
           <span className="text-green-800 font-jp-medium text-sm">
-            {currentUser?.lineUsername || 'ゲスト'}のデータ
+            {import.meta.env.VITE_LOCAL_MODE === 'true' ? 'ローカル保存モード' : 'Supabase同期モード'}
           </span>
         </div>
       </div>

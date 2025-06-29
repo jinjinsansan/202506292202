@@ -38,6 +38,7 @@ export const useAutoSync = (): AutoSyncState => {
   // 自動同期の設定
   useEffect(() => {
     if (!isAutoSyncEnabled || !supabase) return;
+    if (isLocalMode) return; // ローカルモードの場合は自動同期を行わない
     
     // 5分ごとに自動同期を実行
     const interval = setInterval(() => {
@@ -79,6 +80,11 @@ export const useAutoSync = (): AutoSyncState => {
   // データ同期処理
   const syncData = useCallback(async (): Promise<boolean> => {
     if (!supabase) {
+      console.log('Supabase接続なし: 同期をスキップ');
+      return false;
+    }
+    
+    if (isLocalMode) {
       console.log('ローカルモードで動作中: 同期をスキップ');
       return false;
     }
