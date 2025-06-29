@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, ChevronLeft, ChevronRight, Share2 } from 'lucide-react';
-import { getCurrentUser } from '../lib/deviceAuth'; 
+import { getCurrentUser } from '../lib/deviceAuth';
 import { isLocalMode } from '../lib/supabase';
 
 // 日本時間を取得する関数
@@ -161,7 +161,7 @@ const DiaryPage: React.FC = () => {
   // 感情がポジティブかどうかをチェックする関数
   const checkIsPositiveEmotion = (emotion: string): boolean => {
     return ['嬉しい', '感謝', '達成感', '幸せ'].includes(emotion);
-  };
+  }; 
 
   // 前回の無価値感日記のスコアを取得
   useEffect(() => {
@@ -380,13 +380,14 @@ const DiaryPage: React.FC = () => {
       
       // 無価値感を選んだ場合はスコアを追加
       if (finalFormData.emotion === '無価値感') {
-        // 数値型として保存
+        // 数値型として保存（NaNを防ぐため0をデフォルト値に）
         newEntry.selfEsteemScore = Number(worthlessnessScores.todaySelfEsteem) || 0;
         newEntry.worthlessnessScore = Number(worthlessnessScores.todayWorthlessness) || 0;
       } else if (isPositiveEmotion) {
         // ポジティブ感情の場合もスコアを保存
-        newEntry.selfEsteemScore = Number(positiveScores.todayPositiveScore) || 0;
-        newEntry.worthlessnessScore = 100 - (Number(positiveScores.todayPositiveScore) || 0);
+        const positiveScore = Number(positiveScores.todayPositiveScore) || 0;
+        newEntry.selfEsteemScore = positiveScore;
+        newEntry.worthlessnessScore = 100 - positiveScore;
       }
       
       console.log('保存する日記データ:', newEntry);
@@ -439,11 +440,6 @@ const DiaryPage: React.FC = () => {
     } finally {
       setSaving(false);
     }
-  };
-
-  // 選択された感情がポジティブ感情かどうかをチェック
-  const checkIsPositiveEmotion = (emotion: string): boolean => {
-    return ['嬉しい', '感謝', '達成感', '幸せ'].includes(emotion);
   };
 
   // 感情選択時にポジティブ感情かどうかをチェック
@@ -1176,7 +1172,7 @@ const DiaryPage: React.FC = () => {
       <div className="fixed bottom-4 right-4 bg-green-100 border border-green-200 rounded-lg p-3 shadow-lg">
         <div className="flex items-center space-x-2">
           <div className={`w-2 h-2 ${isLocalMode ? 'bg-yellow-500' : 'bg-green-500'} rounded-full`}></div>
-          <span className="text-green-800 font-jp-medium text-sm">
+          <span className="text-green-800 font-jp-medium text-xs sm:text-sm">
             {isLocalMode ? 'ローカルモード（同期なし）' : 'Supabase同期モード'}
           </span>
         </div>
