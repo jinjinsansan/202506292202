@@ -43,7 +43,7 @@ function App() {
 
   // カスタムフックの初期化
   const { isMaintenanceMode, config, isAdminBypass } = useMaintenanceStatus();
-  const { isConnected, error: supabaseError, retryConnection } = useSupabase();
+  const { isConnected, error: supabaseError, retryConnection, currentUser, initializeUser } = useSupabase();
   
   // ローカルモードの確認
   const isLocalMode = import.meta.env.VITE_LOCAL_MODE === 'true';
@@ -63,6 +63,11 @@ function App() {
     const savedUsername = localStorage.getItem('line-username');
     if (savedUsername) {
       setLineUsername(savedUsername);
+      
+      // Supabaseユーザーの初期化
+      if (isConnected) {
+        initializeUser();
+      }
     }
 
     // 管理者状態の確認
@@ -87,6 +92,11 @@ function App() {
       localStorage.setItem('privacyConsentGiven', 'true');
       localStorage.setItem('privacyConsentDate', new Date().toISOString());
       setLineUsername(username);
+
+      // Supabaseユーザーの初期化
+      if (isConnected) {
+        initializeUser();
+      }
       
       // 同意後に自動的にSupabaseユーザーを作成して同期を開始
       if (isConnected && autoSync.isAutoSyncEnabled) {
@@ -617,7 +627,7 @@ function App() {
               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-green-800 font-jp-medium text-sm">ローカルモードで動作中（Supabase接続なし）</span>
+                  <span className="text-green-800 font-jp-medium text-sm">ローカルモードで動作中</span>
                 </div>
               </div>
             )}

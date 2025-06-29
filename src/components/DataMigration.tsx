@@ -187,7 +187,7 @@ const DataMigration: React.FC = () => {
             <div className="flex items-center space-x-3">
               <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
               <span className="font-jp-medium text-gray-900">
-                Supabase: {isConnected ? '接続中' : '未接続'}
+                Supabase: {isConnected ? '接続中' : '未接続'} {isLocalMode ? '(ローカルモード)' : ''}
               </span>
             </div>
             <div>
@@ -239,7 +239,7 @@ const DataMigration: React.FC = () => {
               <div>
                 <h3 className="font-jp-bold text-gray-900 mb-2">自動同期設定</h3>
                 <p className="text-gray-700 font-jp-normal mb-4">
-                  自動同期機能は5分ごとにデータをクラウドに保存します。端末を変更する際にもデータが引き継がれます。
+                  自動同期機能は5分ごとにデータをクラウドに保存します。端末を変更する際にもデータが引き継がれます。{isLocalMode ? 'ただし、現在はローカルモードのため同期は行われません。' : ''}
                 </p>
               </div>
             </div>
@@ -254,11 +254,21 @@ const DataMigration: React.FC = () => {
                   type="checkbox" 
                   checked={autoSyncEnabled} 
                   onChange={(e) => toggleAutoSync(e.target.checked)}
+                  disabled={isLocalMode}
                   className="sr-only peer" 
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
+            
+            {isLocalMode && (
+              <div className="mt-2 bg-yellow-50 rounded-lg p-3 border border-yellow-200">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  <span className="text-yellow-800 font-jp-medium text-xs">ローカルモードが有効なため、自動同期は無効化されています</span>
+                </div>
+              </div>
+            )}
             
             <div className="mt-4 bg-green-50 rounded-lg p-4 border border-green-200">
               <div className="flex items-start space-x-2">
