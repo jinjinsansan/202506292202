@@ -86,28 +86,31 @@ export const diaryService = {
   async syncDiaries(userId: string, diaries: any[]) {
     if (!supabase) return { success: false, error: 'Supabase接続なし' };
     if (isLocalMode) {
-      console.log('ローカルモードで動作中: 同期をスキップします');
+      console.log('ローカルモードで動作中: 同期をスキップします', diaries.length, '件のデータ');
       return { success: false, error: 'ローカルモードで動作中' };
     }
     
     try {
       // 日記データの整形
-      const formattedDiaries = diaries.map(diary => ({
-        id: diary.id,
-        user_id: userId,
-        date: diary.date,
-        emotion: diary.emotion,
-        event: diary.event,
-        realization: diary.realization,
-        self_esteem_score: diary.self_esteem_score || diary.selfEsteemScore || 50,
-        worthlessness_score: diary.worthlessness_score || diary.worthlessnessScore || 50,
-        created_at: diary.created_at || new Date().toISOString(),
-        counselor_memo: diary.counselor_memo || null,
-        is_visible_to_user: diary.is_visible_to_user || false,
-        counselor_name: diary.counselor_name || null,
-        assigned_counselor: diary.assigned_counselor || null,
-        urgency_level: diary.urgency_level || null
-      }));
+      const formattedDiaries = diaries.map(diary => {
+        console.log('日記データ変換:', diary);
+        return {
+          id: diary.id,
+          user_id: userId,
+          date: diary.date,
+          emotion: diary.emotion,
+          event: diary.event,
+          realization: diary.realization,
+          self_esteem_score: diary.self_esteem_score || diary.selfEsteemScore || 50,
+          worthlessness_score: diary.worthlessness_score || diary.worthlessnessScore || 50,
+          created_at: diary.created_at || new Date().toISOString(),
+          counselor_memo: diary.counselor_memo || null,
+          is_visible_to_user: diary.is_visible_to_user || false,
+          counselor_name: diary.counselor_name || null,
+          assigned_counselor: diary.assigned_counselor || null,
+          urgency_level: diary.urgency_level || null
+        };
+      });
       
       console.log('Supabaseに同期するデータ:', formattedDiaries.length, '件');
       
@@ -120,11 +123,11 @@ export const diaryService = {
         });
       
       if (error) {
-        console.error('日記同期エラー:', error);
+        console.error('日記同期エラー:', error, formattedDiaries);
         return { success: false, error: error.message };
       }
       
-      console.log('Supabase同期成功:', formattedDiaries.length, '件のデータを同期しました');
+      console.log('Supabase同期成功:', formattedDiaries.length, '件のデータを同期しました', data);
       return { success: true, data };
     } catch (error) {
       console.error('日記同期サービスエラー:', error);

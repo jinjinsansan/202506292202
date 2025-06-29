@@ -73,13 +73,14 @@ function App() {
   // 自動同期の状態を確認
   useEffect(() => {
     if (isConnected && autoSync.currentUser && autoSync.isAutoSyncEnabled && !isLocalMode) {
-      console.log('自動同期が有効になりました。5分ごとにデータが同期されます。');
+      console.log('自動同期が有効になりました。1分ごとにデータが同期されます。');
       // 初回の手動同期を実行
       setTimeout(() => {
+        console.log('App.tsx: 初期同期を実行します');
         autoSync.triggerManualSync().catch(error => {
           console.error('初期同期エラー:', error);
         });
-      }, 2000);
+      }, 3000);
     }
   }, [isConnected, autoSync.currentUser, autoSync.isAutoSyncEnabled]);
 
@@ -95,11 +96,13 @@ function App() {
       // 同意後に自動的にSupabaseユーザーを作成して同期を開始
       if (isConnected && autoSync.isAutoSyncEnabled && !isLocalMode) {
         try {
+          console.log('プライバシー同意後の初期同期を設定します');
           setTimeout(() => {
+            console.log('プライバシー同意後の初期同期を実行します');
             autoSync.triggerManualSync().catch(error => {
               console.error('初期同期エラー:', error);
             });
-          }, 1000);
+          }, 2000);
         } catch (error) {
           console.error('初期同期設定エラー:', error);
         }

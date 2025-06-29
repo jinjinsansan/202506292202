@@ -40,14 +40,18 @@ export const useAutoSync = (): AutoSyncState => {
   // 自動同期の設定
   useEffect(() => {
     if (!isAutoSyncEnabled || !supabase) return;
-    if (isLocalMode) return; // ローカルモードの場合は自動同期を行わない
+    if (isLocalMode) {
+      console.log('ローカルモードで動作中: 自動同期は無効です');
+      return; // ローカルモードの場合は自動同期を行わない
+    }
     
     // 5分ごとに自動同期を実行
     const interval = setInterval(() => {
       if (!isSyncing) {
+        console.log('自動同期を実行します...');
         syncData();
       }
-    }, 5 * 60 * 1000); // 5分 = 300,000ミリ秒
+    }, 1 * 60 * 1000); // 1分 = 60,000ミリ秒（テスト用に短縮）
     
     return () => clearInterval(interval);
   }, [isAutoSyncEnabled, isSyncing]);
@@ -180,6 +184,7 @@ export const useAutoSync = (): AutoSyncState => {
       // 日記データを同期
       console.log('同期を開始します:', entries.length, '件のデータ');
       const { success, error } = await diaryService.syncDiaries(userId, entries);
+      console.log('同期結果:', success ? '成功' : '失敗', error ? `エラー: ${error}` : '');
       
       if (!success) {
         throw new Error(error || '日記の同期に失敗しました');
@@ -209,7 +214,7 @@ export const useAutoSync = (): AutoSyncState => {
   // 手動同期イベントのリスナー
   useEffect(() => {
     const handleManualSyncRequest = () => {
-      console.log('手動同期リクエストを受信しました');
+      console.log('手動同期リクエストを受信しました', '同期中:', isSyncing, 'ローカルモード:', isLocalMode);
       if (!isSyncing && !isLocalMode) {
         triggerManualSync().then(success => {
           console.log('手動同期結果:', success ? '成功' : '失敗');
@@ -220,6 +225,16 @@ export const useAutoSync = (): AutoSyncState => {
     };
     
     window.addEventListener('manual-sync-request', handleManualSyncRequest);
+    
+    // 初回マウント時に手動同期を実行
+    if (!isLocalMode && !isSyncing) {
+      console.log('初期同期を実行します...');
+      setTimeout(() => {
+        triggerManualSync().catch(error => {
+          console.error('初期同期エラー:', error);
+        });
+      }, 3000);
+    }
     
     return () => {
       window.removeEventListener('manual-sync-request', handleManualSyncRequest);

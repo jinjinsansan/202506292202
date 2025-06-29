@@ -242,7 +242,7 @@ const DataMigration: React.FC = () => {
             <div className="flex items-center space-x-3">
               <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
               <span className="font-jp-medium text-gray-900">
-                Supabase: {isConnected ? '接続中' : '未接続'} {isLocalMode ? '(ローカルモード)' : ''}
+                自動同期 {isLocalMode ? '(ローカルモード中は無効)' : ''} - 1分間隔
               </span>
             </div>
             <div>
@@ -339,6 +339,7 @@ const DataMigration: React.FC = () => {
                     <li>端末変更時にデータが引き継がれます</li>
                     <li>ブラウザのキャッシュクリアでデータが失われません</li>
                     <li>カウンセラーがあなたの日記を確認できます</li>
+                    <li>1分ごとに自動的にデータが同期されます</li>
                     {isLocalMode && <li>※ローカルモードを無効にすると利用できます</li>}
                   </ul>
                 </div>
@@ -476,14 +477,14 @@ const DataMigration: React.FC = () => {
                 {isAdminMode ? (
                   <>
                     <li>ローカルデータはブラウザに保存されています</li>
-                    <li>Supabaseデータはクラウドに保存されます</li>
+                    <li>Supabaseデータはクラウドに保存されます（1分ごとに同期）</li>
                     <li>管理者モードでは全体のデータ数が表示されます</li>
                     <li>ブラウザのキャッシュをクリアするとローカルデータは失われます{!isLocalMode && '（Supabaseに同期されていれば復元可能）'}</li>
                     <li>端末を変更する場合は、{isLocalMode ? 'バックアップを作成してください' : '先にデータをSupabaseに移行してください'}</li>
                   </>
                 ) : (
                   <>
-                    <li>自動同期は5分ごとにバックグラウンドで実行されます</li>
+                    <li>自動同期は1分ごとにバックグラウンドで実行されます</li>
                     <li>ブラウザのキャッシュをクリアしても、データは安全に保存されます</li>
                     <li>端末を変更する場合も、自動的にデータが引き継がれます</li>
                     <li>{isLocalMode ? 'ローカルモードを無効にして' : ''}自動同期を有効にすることで、データが安全に保存されます</li>
