@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Database, Download, Upload, RefreshCw, CheckCircle, AlertTriangle, Shield, Info, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Database, Download, Upload, RefreshCw, CheckCircle, AlertTriangle, Shield, Info } from 'lucide-react';
 import { getCurrentUser } from '../lib/deviceAuth';
 
 const UserDataManagement: React.FC = () => {
@@ -7,7 +7,6 @@ const UserDataManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [backupData, setBackupData] = useState<File | null>(null);
-  const [restoreStatus, setRestoreStatus] = useState<{message: string, success: boolean} | null>(null);
 
   // バックアップデータの作成
   const handleCreateBackup = () => {
@@ -50,113 +49,6 @@ const UserDataManagement: React.FC = () => {
       console.error('バックアップ作成エラー:', error);
       setStatus('バックアップの作成に失敗しました。');
     } finally {
-      setLoading(false);
-    }
-  };
-  
-  // バックアップファイルの選択
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setBackupData(e.target.files[0]);
-      setRestoreStatus(null);
-    }
-  };
-
-  // バックアップからの復元
-  const handleRestoreBackup = async () => {
-    if (!backupData) {
-      setRestoreStatus({
-        message: 'バックアップファイルを選択してください。',
-        success: false
-      });
-      return;
-    }
-    
-    if (!window.confirm('バックアップからデータを復元すると、現在のデータが上書きされます。続行しますか？')) {
-      return;
-    }
-    
-    setLoading(true);
-    setRestoreStatus(null);
-    
-    try {
-      // ファイルを読み込み
-      const fileReader = new FileReader();
-      
-      fileReader.onload = (event) => {
-        try {
-          if (!event.target || typeof event.target.result !== 'string') {
-            throw new Error('ファイルの読み込みに失敗しました。');
-          }
-          
-          const backupObject = JSON.parse(event.target.result);
-          
-          // バージョンチェック
-          if (!backupObject.version) {
-            throw new Error('無効なバックアップファイルです。');
-          }
-          
-          // データの復元
-          if (backupObject.journalEntries) {
-            localStorage.setItem('journalEntries', JSON.stringify(backupObject.journalEntries));
-          }
-          
-          if (backupObject.initialScores) {
-            localStorage.setItem('initialScores', JSON.stringify(backupObject.initialScores));
-          }
-          
-          if (backupObject.consentHistories) {
-            localStorage.setItem('consent_histories', JSON.stringify(backupObject.consentHistories));
-          }
-          
-          if (backupObject.lineUsername) {
-            localStorage.setItem('line-username', backupObject.lineUsername);
-          }
-          
-          if (backupObject.privacyConsentGiven) {
-            localStorage.setItem('privacyConsentGiven', backupObject.privacyConsentGiven);
-          }
-          
-          if (backupObject.privacyConsentDate) {
-            localStorage.setItem('privacyConsentDate', backupObject.privacyConsentDate);
-          }
-          
-          setRestoreStatus({
-            message: 'データが正常に復元されました！ページを再読み込みしてください。',
-            success: true
-          });
-          
-          // 5秒後に自動的にページを再読み込み
-          setTimeout(() => {
-            window.location.reload();
-          }, 5000);
-          
-        } catch (error) {
-          console.error('データ復元エラー:', error);
-          setRestoreStatus({
-            message: 'データの復元に失敗しました。有効なバックアップファイルか確認してください。',
-            success: false
-          });
-          setLoading(false);
-        }
-      };
-      
-      fileReader.onerror = () => {
-        setRestoreStatus({
-          message: 'ファイルの読み込みに失敗しました。',
-          success: false
-        });
-        setLoading(false);
-      };
-      
-      fileReader.readAsText(backupData);
-      
-    } catch (error) {
-      console.error('バックアップ復元エラー:', error);
-      setRestoreStatus({
-        message: 'バックアップの復元に失敗しました。',
-        success: false
-      });
       setLoading(false);
     }
   };
@@ -257,8 +149,8 @@ const UserDataManagement: React.FC = () => {
     <div className="w-full max-w-4xl mx-auto space-y-6 px-4">
       <div className="bg-white rounded-xl shadow-lg p-6">
         <div className="flex items-center space-x-3 mb-6">
-          <User className="w-8 h-8 text-blue-600" />
-          <h1 className="text-2xl font-jp-bold text-gray-900">ユーザーデータ管理</h1>
+          <Database className="w-8 h-8 text-blue-600" />
+          <h1 className="text-2xl font-jp-bold text-gray-900">データ管理</h1>
         </div>
 
         <div className="space-y-6">
@@ -272,6 +164,7 @@ const UserDataManagement: React.FC = () => {
                   <li>ブラウザのキャッシュクリアや端末変更に備えて、定期的にデータをバックアップしてください</li>
                   <li>バックアップファイルは安全な場所に保存してください</li>
                   <li>復元時には現在のデータが上書きされますのでご注意ください</li>
+                  <li>管理者向けの全体バックアップ機能は「管理画面」の「バックアップ」タブにあります</li>
                 </ul>
               </div>
             </div>
@@ -327,49 +220,6 @@ const UserDataManagement: React.FC = () => {
                     hover:file:bg-purple-200
                     cursor-pointer"
                 />
-              </div>
-              
-              <button
-                onClick={handleRestoreBackup}
-                disabled={loading || !backupData}
-                className="flex items-center justify-center space-x-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-jp-medium transition-colors w-full sm:w-auto"
-              >
-                {loading ? (
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Upload className="w-5 h-5" />
-                )}
-                <span>バックアップから復元</span>
-              </button>
-            </div>
-          </div>
-          
-          {/* 復元セクション */}
-          <div className="bg-purple-50 rounded-lg p-6 border border-purple-200 mb-6">
-            <div className="flex items-start space-x-3 mb-4">
-              <Upload className="w-6 h-6 text-purple-600 mt-1 flex-shrink-0" />
-              <div>
-                <h3 className="font-jp-bold text-gray-900 mb-2">データの復元</h3>
-                <p className="text-gray-700 font-jp-normal text-sm mb-4">
-                  以前作成したバックアップファイルからデータを復元します。現在のデータは上書きされます。
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleFileChange}
-                  className="block w-full text-sm text-gray-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-lg file:border-0
-                    file:text-sm file:font-jp-medium
-                    file:bg-purple-100 file:text-purple-700
-                    hover:file:bg-purple-200
-                    cursor-pointer"
-                />
                 {backupData && (
                   <div className="mt-2 text-sm text-purple-600 font-jp-medium">
                     選択されたファイル: {backupData.name}
@@ -407,24 +257,6 @@ const UserDataManagement: React.FC = () => {
                 <CheckCircle className="w-5 h-5 flex-shrink-0" />
               )}
               <span className="font-jp-medium">{status}</span>
-            </div>
-          </div>
-        )}
-
-        {/* 復元ステータス表示 */}
-        {restoreStatus && (
-          <div className={`rounded-lg p-4 border ${
-            restoreStatus.success 
-              ? 'bg-green-50 border-green-200 text-green-800' 
-              : 'bg-red-50 border-red-200 text-red-800'
-          }`}>
-            <div className="flex items-center space-x-2">
-              {restoreStatus.success ? (
-                <CheckCircle className="w-5 h-5 flex-shrink-0" />
-              ) : (
-                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-              )}
-              <span className="font-jp-medium">{restoreStatus.message}</span>
             </div>
           </div>
         )}
