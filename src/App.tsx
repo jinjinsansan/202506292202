@@ -71,6 +71,20 @@ function App() {
       localStorage.setItem('privacyConsentDate', new Date().toISOString());
       setLineUsername(username);
 
+      setShowPrivacyConsent(false);
+    } else {
+      alert('プライバシーポリシーに同意いただけない場合、サービスをご利用いただけません。');
+    }
+  };
+
+  // デバイス認証処理
+  const handleDeviceAuthLogin = (username: string) => {
+    setLineUsername(username);
+    setShowDeviceAuth(false);
+  };
+
+  // 管理者ログイン処理
+  const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // メールアドレスとパスワードの組み合わせをチェック
     const counselorCredentials = [
@@ -557,16 +571,7 @@ function App() {
             {!isLocalMode && (
               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
                 <span className="text-green-800 font-jp-medium text-sm">
-                  Supabase接続中
-                </span>
-              </div>
-            )}
-
-            {/* 自動同期設定（ローカルモードでない場合のみ） */}
-            {!isLocalMode && (
-              <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                <span className="text-green-800 font-jp-medium text-sm">
-                  Supabase接続中
+                  {isConnected ? 'Supabase接続中' : 'Supabase接続エラー'}
                 </span>
               </div>
             )}
@@ -593,9 +598,10 @@ function App() {
             {/* ローカルモード表示 */}
             {isLocalMode && (
               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                <span className="text-green-800 font-jp-medium text-sm">
-                  ローカルモードで動作中（Supabase接続なし）
-                </span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-green-800 font-jp-medium text-sm">ローカルモードで動作中（Supabase接続なし）</span>
+                </div>
               </div>
             )}
 
@@ -657,6 +663,6 @@ function App() {
       </main>
     </div>
   );
-};
+}
 
 export default App;
