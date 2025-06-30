@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Heart, BookOpen, Search, BarChart2, HelpCircle, MessageCircle, Settings, Home, User, Menu, X, FileText, ArrowRight, Shield, BarChart, Database, LogOut, ExternalLink } from 'lucide-react';
-import { useMaintenanceStatus } from './hooks/useMaintenanceStatus';
 import { isLocalMode } from './lib/supabase';
 import { isAuthenticated, getCurrentUser, getAuthSession } from './lib/deviceAuth';
 
@@ -44,8 +42,6 @@ function App() {
   const { isMaintenanceMode, isAdminBypass, config } = useMaintenanceStatus();
   const [supabaseError, setSupabaseError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-
-  // 初期化
   useEffect(() => {
     // プライバシーポリシー同意状態の確認
     const consentGiven = localStorage.getItem('privacyConsentGiven');
@@ -58,16 +54,6 @@ function App() {
     if (savedUsername) {
       setLineUsername(savedUsername);
     }
-
-    // 管理者状態の確認
-    const currentCounselor = localStorage.getItem('current_counselor');
-    if (currentCounselor) {
-      setIsAdmin(true);
-    }
-    
-    // Supabase接続状態を確認
-    setIsConnected(!isLocalMode);
-  }, []);
 
   // Supabase接続の再試行
   const retryConnection = () => {
@@ -85,20 +71,6 @@ function App() {
       localStorage.setItem('privacyConsentDate', new Date().toISOString());
       setLineUsername(username);
 
-      setShowPrivacyConsent(false);
-    } else {
-      alert('プライバシーポリシーに同意いただけない場合、サービスをご利用いただけません。');
-    }
-  };
-
-  // デバイス認証処理
-  const handleDeviceAuthLogin = (username: string) => {
-    setLineUsername(username);
-    setShowDeviceAuth(false);
-  };
-
-  // 管理者ログイン処理
-  const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // メールアドレスとパスワードの組み合わせをチェック
     const counselorCredentials = [
@@ -590,6 +562,15 @@ function App() {
               </div>
             )}
 
+            {/* 自動同期設定（ローカルモードでない場合のみ） */}
+            {!isLocalMode && (
+              <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                <span className="text-green-800 font-jp-medium text-sm">
+                  Supabase接続中
+                </span>
+              </div>
+            )}
+
             {/* Supabase接続エラー表示（ローカルモードでない場合のみ） */}
             {supabaseError && !isLocalMode && (
               <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
@@ -615,7 +596,6 @@ function App() {
                 <span className="text-green-800 font-jp-medium text-sm">
                   ローカルモードで動作中（Supabase接続なし）
                 </span>
-              </div>
             )}
 
             {/* アクティブなタブに応じたコンテンツ表示 */}

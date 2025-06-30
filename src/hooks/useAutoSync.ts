@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase, userService, diaryService, isLocalMode } from '../lib/supabase';
 import { getCurrentUser } from '../lib/deviceAuth';
-
 interface AutoSyncState {
   isAutoSyncEnabled: boolean;
   isSyncing: boolean;
@@ -18,7 +17,7 @@ export const useAutoSync = (): AutoSyncState => {
   const [error, setError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(!!supabase);
   
-  // 自動同期設定の読み込み
+  const [isConnected, setIsConnected] = useState<boolean>(!!supabase && !isLocalMode);
   useEffect(() => {
     const autoSyncSetting = localStorage.getItem('auto_sync_enabled');
     setIsAutoSyncEnabled(autoSyncSetting !== 'false'); // デフォルトはtrue
@@ -28,6 +27,9 @@ export const useAutoSync = (): AutoSyncState => {
     if (savedLastSyncTime) {
       setLastSyncTime(savedLastSyncTime);
     }
+    
+    // Supabase接続状態を確認
+    setIsConnected(!!supabase && !isLocalMode);
     
     // Supabase接続状態を確認
     setIsConnected(!!supabase && !isLocalMode);

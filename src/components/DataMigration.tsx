@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Upload, Download, RefreshCw, CheckCircle, AlertTriangle, Shield, Info, Save } from 'lucide-react';
-import { supabase, userService, syncService, isLocalMode } from '../lib/supabase';
 import { getCurrentUser } from '../lib/deviceAuth';
 
 const DataMigration: React.FC = () => {
@@ -15,13 +14,11 @@ const DataMigration: React.FC = () => {
   const [syncDirection, setSyncDirection] = useState<'local-to-supabase' | 'supabase-to-local'>('local-to-supabase');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState<boolean>(true);
-  const [backupInProgress, setBackupInProgress] = useState(false);
   const [totalLocalDataCount, setTotalLocalDataCount] = useState<number>(0);
   const [totalSupabaseDataCount, setTotalSupabaseDataCount] = useState<number>(0);
   const [isConnected, setIsConnected] = useState<boolean>(!!supabase && !isLocalMode);
   const [currentUser, setCurrentUser] = useState<any | null>(null);
-
+  const [isConnected, setIsConnected] = useState<boolean>(!!supabase && !isLocalMode);
   useEffect(() => {
     loadDataInfo();
     // 自動同期設定を読み込み
@@ -48,8 +45,37 @@ const DataMigration: React.FC = () => {
         initializeUser(user.lineUsername);
       }
     }
+    
+    // Supabase接続状態を確認
+    setIsConnected(!!supabase && !isLocalMode);
+    
+    // 現在のユーザー情報を取得
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser({ id: 'local-user-id', line_username: user.lineUsername });
+      
+      // 管理者モードでない場合は、Supabaseからユーザー情報を取得
+      if (!isAdminMode && !isLocalMode && supabase) {
+        initializeUser(user.lineUsername);
+      }
+    }
   }, []);
 
+  // ユーザー情報の初期化
+  const initializeUser = async (lineUsername: string) => {
+    if (!supabase || isLocalMode) return;
+    
+    try {
+      const supabaseUser = await userService.createOrGetUser(lineUsername);
+      if (supabaseUser) {
+        console.log('DataMigration: ユーザー初期化成功:', supabaseUser);
+        setCurrentUser(supabaseUser);
+      }
+    } catch (error) {
+      console.error('DataMigration: ユーザー初期化エラー:', error);
+    }
+  };
+  
   // ユーザー情報の初期化
   const initializeUser = async (lineUsername: string) => {
     if (!supabase || isLocalMode) return;
