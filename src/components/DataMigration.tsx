@@ -42,9 +42,29 @@ const DataMigration: React.FC = () => {
     const user = getCurrentUser();
     if (user) {
       setCurrentUser({ id: 'local-user-id', line_username: user.lineUsername });
+      
+      // 管理者モードでない場合は、Supabaseからユーザー情報を取得
+      if (!isAdminMode && !isLocalMode && supabase) {
+        initializeUser(user.lineUsername);
+      }
     }
   }, []);
 
+  // ユーザー情報の初期化
+  const initializeUser = async (lineUsername: string) => {
+    if (!supabase || isLocalMode) return;
+    
+    try {
+      const supabaseUser = await userService.createOrGetUser(lineUsername);
+      if (supabaseUser) {
+        console.log('DataMigration: ユーザー初期化成功:', supabaseUser);
+        setCurrentUser(supabaseUser);
+      }
+    } catch (error) {
+      console.error('DataMigration: ユーザー初期化エラー:', error);
+    }
+  };
+  
   const loadDataInfo = async () => {
     try {
       if (isAdminMode) {
