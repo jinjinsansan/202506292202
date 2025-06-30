@@ -596,6 +596,7 @@ function App() {
                 <span className="text-green-800 font-jp-medium text-sm">
                   ローカルモードで動作中（Supabase接続なし）
                 </span>
+              </div>
             )}
 
             {/* アクティブなタブに応じたコンテンツ表示 */}
