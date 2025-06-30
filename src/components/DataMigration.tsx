@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Upload, Download, RefreshCw, CheckCircle, AlertTriangle, Shield, Info, Save } from 'lucide-react';
 import { supabase, userService, syncService, isLocalMode } from '../lib/supabase';
-import { useSupabase } from '../hooks/useSupabase';
 import { getCurrentUser } from '../lib/deviceAuth';
 
 const DataMigration: React.FC = () => {
@@ -18,12 +17,10 @@ const DataMigration: React.FC = () => {
   const [isAdminMode, setIsAdminMode] = useState<boolean>(false);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState<boolean>(true);
   const [backupInProgress, setBackupInProgress] = useState(false);
-
-  // 全体のデータ数を保持する状態
   const [totalLocalDataCount, setTotalLocalDataCount] = useState<number>(0);
   const [totalSupabaseDataCount, setTotalSupabaseDataCount] = useState<number>(0);
-
-  const { isConnected, currentUser, initializeUser } = useSupabase();
+  const [isConnected, setIsConnected] = useState<boolean>(!!supabase && !isLocalMode);
+  const [currentUser, setCurrentUser] = useState<any | null>(null);
 
   useEffect(() => {
     loadDataInfo();
@@ -36,6 +33,15 @@ const DataMigration: React.FC = () => {
     if (counselorName) {
       setIsAdminMode(true);
       console.log('DataMigration: 管理者モードで動作中:', counselorName);
+    }
+    
+    // Supabase接続状態を確認
+    setIsConnected(!!supabase && !isLocalMode);
+    
+    // 現在のユーザー情報を取得
+    const user = getCurrentUser();
+    if (user) {
+      setCurrentUser({ id: 'local-user-id', line_username: user.lineUsername });
     }
   }, []);
 

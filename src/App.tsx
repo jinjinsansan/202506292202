@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, BookOpen, Search, BarChart2, HelpCircle, MessageCircle, Settings, Home, User, Menu, X, FileText, ArrowRight, Shield, BarChart, Database, LogOut, ExternalLink } from 'lucide-react';
 import { useMaintenanceStatus } from './hooks/useMaintenanceStatus';
-import { useSupabase } from './hooks/useSupabase';
-import { useAutoSync } from './hooks/useAutoSync';
 import { isLocalMode } from './lib/supabase';
 import { isAuthenticated, getCurrentUser, getAuthSession } from './lib/deviceAuth';
 
@@ -44,10 +42,8 @@ function App() {
 
   // カスタムフックの初期化
   const { isMaintenanceMode, isAdminBypass, config } = useMaintenanceStatus();
-  const { isConnected, error: supabaseError, retryConnection } = useSupabase();
-  
-  // 自動同期フックを初期化
-  const autoSync = useAutoSync();
+  const [supabaseError, setSupabaseError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
 
   // 初期化
   useEffect(() => {
@@ -68,27 +64,17 @@ function App() {
     if (currentCounselor) {
       setIsAdmin(true);
     }
+    
+    // Supabase接続状態を確認
+    setIsConnected(!isLocalMode);
   }, []);
 
-  // 自動同期の状態を確認
-  useEffect(() => {
-    if (isConnected && autoSync.currentUser && autoSync.isAutoSyncEnabled && !isLocalMode) {
-      console.log('App.tsx: 自動同期が有効になりました。30秒ごとにデータが同期されます。');
-      
-      // 手動同期イベントを発火
-      const triggerSync = () => {
-        console.log('App.tsx: 手動同期イベントを発火します');
-        const event = new CustomEvent('manual-sync-request');
-        window.dispatchEvent(event);
-      };
-      
-      // 初回同期を5秒後に実行
-      setTimeout(triggerSync, 5000);
-      
-      // 30秒後に再度同期を実行（初回同期の補完として）
-      setTimeout(triggerSync, 30000);
-    }
-  }, [isConnected, autoSync.currentUser, autoSync.isAutoSyncEnabled]);
+  // Supabase接続の再試行
+  const retryConnection = () => {
+    console.log('Supabase接続を再試行します');
+    setIsConnected(!isLocalMode);
+    setSupabaseError(null);
+  };
 
   // プライバシーポリシー同意処理
   const handlePrivacyConsent = (accepted: boolean) => {
@@ -98,21 +84,7 @@ function App() {
       localStorage.setItem('privacyConsentGiven', 'true');
       localStorage.setItem('privacyConsentDate', new Date().toISOString());
       setLineUsername(username);
-      
-      // 同意後に自動的にSupabaseユーザーを作成して同期を開始
-      if (isConnected && autoSync.isAutoSyncEnabled && !isLocalMode) {
-        try {
-          console.log('App.tsx: プライバシー同意後の初期同期を設定します', 'ユーザー名:', lineUsername);
-          setTimeout(() => {
-            console.log('App.tsx: プライバシー同意後の初期同期を実行します');
-            const event = new CustomEvent('manual-sync-request');
-            window.dispatchEvent(event);
-          }, 3000);
-        } catch (error) {
-          console.error('初期同期設定エラー:', error);
-        }
-      }
-       
+
       setShowPrivacyConsent(false);
     } else {
       alert('プライバシーポリシーに同意いただけない場合、サービスをご利用いただけません。');
@@ -609,6 +581,15 @@ function App() {
               </div>
             )}
 
+            {/* 自動同期設定（ローカルモードでない場合のみ） */}
+            {!isLocalMode && (
+              <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                <span className="text-green-800 font-jp-medium text-sm">
+                  Supabase接続中
+                </span>
+              </div>
+            )}
+
             {/* Supabase接続エラー表示（ローカルモードでない場合のみ） */}
             {supabaseError && !isLocalMode && (
               <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
@@ -631,10 +612,9 @@ function App() {
             {/* ローカルモード表示 */}
             {isLocalMode && (
               <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-green-800 font-jp-medium text-sm">ローカルモードで動作中（Supabase接続なし）</span>
-                </div>
+                <span className="text-green-800 font-jp-medium text-sm">
+                  ローカルモードで動作中（Supabase接続なし）
+                </span>
               </div>
             )}
 
